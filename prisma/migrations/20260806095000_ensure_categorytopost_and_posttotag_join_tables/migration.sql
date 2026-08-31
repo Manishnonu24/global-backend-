@@ -1,0 +1,64 @@
+-- Ensure category, post, and tag use InnoDB engine so foreign keys are supported
+ALTER TABLE `category` ENGINE = InnoDB;
+ALTER TABLE `post` ENGINE = InnoDB;
+ALTER TABLE `tag` ENGINE = InnoDB;
+
+-- 1. _CategoryToPost
+SET @tbl_exists := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE BINARY(TABLE_SCHEMA) = BINARY(DATABASE()) AND BINARY(LOWER(TABLE_NAME)) = BINARY('_categorytopost'));
+SET @sql := IF(@tbl_exists = 0,
+  'CREATE TABLE `_CategoryToPost` ( `A` VARCHAR(50) NOT NULL, `B` VARCHAR(50) NOT NULL, UNIQUE INDEX `_CategoryToPost_AB_unique`(`A`, `B`), INDEX `_CategoryToPost_B_index`(`B`) ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE = InnoDB',
+  'ALTER TABLE `_CategoryToPost` ENGINE = InnoDB'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Add FK A for _CategoryToPost if missing
+SET @fk_exists := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE BINARY(TABLE_SCHEMA) = BINARY(DATABASE()) AND BINARY(LOWER(TABLE_NAME)) = BINARY('_categorytopost') AND BINARY(CONSTRAINT_NAME) = BINARY('_CategoryToPost_A_fkey'));
+SET @sql := IF(@fk_exists = 0,
+  'ALTER TABLE `_CategoryToPost` ADD CONSTRAINT `_CategoryToPost_A_fkey` FOREIGN KEY (`A`) REFERENCES `category`(`id`) ON DELETE CASCADE ON UPDATE CASCADE',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Add FK B for _CategoryToPost if missing
+SET @fk_exists := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE BINARY(TABLE_SCHEMA) = BINARY(DATABASE()) AND BINARY(LOWER(TABLE_NAME)) = BINARY('_categorytopost') AND BINARY(CONSTRAINT_NAME) = BINARY('_CategoryToPost_B_fkey'));
+SET @sql := IF(@fk_exists = 0,
+  'ALTER TABLE `_CategoryToPost` ADD CONSTRAINT `_CategoryToPost_B_fkey` FOREIGN KEY (`B`) REFERENCES `post`(`id`) ON DELETE CASCADE ON UPDATE CASCADE',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 2. _PostToTag
+SET @tbl_exists := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE BINARY(TABLE_SCHEMA) = BINARY(DATABASE()) AND BINARY(LOWER(TABLE_NAME)) = BINARY('_posttotag'));
+SET @sql := IF(@tbl_exists = 0,
+  'CREATE TABLE `_PostToTag` ( `A` VARCHAR(50) NOT NULL, `B` VARCHAR(50) NOT NULL, UNIQUE INDEX `_PostToTag_AB_unique`(`A`, `B`), INDEX `_PostToTag_B_index`(`B`) ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci ENGINE = InnoDB',
+  'ALTER TABLE `_PostToTag` ENGINE = InnoDB'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Add FK A for _PostToTag if missing
+SET @fk_exists := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE BINARY(TABLE_SCHEMA) = BINARY(DATABASE()) AND BINARY(LOWER(TABLE_NAME)) = BINARY('_posttotag') AND BINARY(CONSTRAINT_NAME) = BINARY('_PostToTag_A_fkey'));
+SET @sql := IF(@fk_exists = 0,
+  'ALTER TABLE `_PostToTag` ADD CONSTRAINT `_PostToTag_A_fkey` FOREIGN KEY (`A`) REFERENCES `post`(`id`) ON DELETE CASCADE ON UPDATE CASCADE',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Add FK B for _PostToTag if missing
+SET @fk_exists := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE BINARY(TABLE_SCHEMA) = BINARY(DATABASE()) AND BINARY(LOWER(TABLE_NAME)) = BINARY('_posttotag') AND BINARY(CONSTRAINT_NAME) = BINARY('_PostToTag_B_fkey'));
+SET @sql := IF(@fk_exists = 0,
+  'ALTER TABLE `_PostToTag` ADD CONSTRAINT `_PostToTag_B_fkey` FOREIGN KEY (`B`) REFERENCES `tag`(`id`) ON DELETE CASCADE ON UPDATE CASCADE',
+  'SELECT 1'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

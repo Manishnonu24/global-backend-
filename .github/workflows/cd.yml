@@ -1,0 +1,245 @@
+name: CD Pipeline
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    # Only deploy when CI passed for a push to main
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' }}
+    runs-on: self-hosted
+
+    steps:
+    - name: Free self-hosted runner disk space
+      run: |
+        echo "Cleaning runner logs and docker caches..."
+        rm -rf /home/runner/actions-runner/_diag/* || true
+        sudo rm -rf /tmp/* || true
+        sudo docker builder prune -af || true
+        df -h
+
+    - name: Login to Docker Hub
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | sudo docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+    # Capture the currently running container image so we can restore it on failure
+    - name: Record previous container state
+      id: prev_state
+      run: |
+        PREV_IMAGE=$(sudo docker inspect ahealthplace-next-container --format='{{.Config.Image}}' 2>/dev/null || echo "")
+        echo "PREV_IMAGE=${PREV_IMAGE}" >> "$GITHUB_ENV"
+        echo "Previous image: ${PREV_IMAGE}"
+
+    # Use the exact commit SHA image, never mutable :latest. Reclaim only
+    # unused Docker data before pulling; volumes and container-used images
+    # (including PREV_IMAGE) are preserved.
+    - name: Pull exact commit image from Docker Hub
+      run: |
+        IMAGE="doitformellc/ahealthplace-next:${{ github.event.workflow_run.head_sha }}"
+        echo "Docker storage before cleanup:"
+        sudo docker system df || true
+        sudo docker container prune -f --filter "until=24h"
+        sudo docker builder prune -af
+        sudo docker image prune -af
+        echo "Docker storage after cleanup:"
+        sudo docker system df || true
+        echo "Pulling image: ${IMAGE}"
+        sudo docker pull "${IMAGE}"
+        echo "DEPLOY_IMAGE=${IMAGE}" >> "$GITHUB_ENV"
+
+    # Step 1: Verify database connectivity
+    - name: Verify database connectivity (pre-flight ping)
+      run: |
+        sudo docker run --rm \
+          --network ahealthplace-network \
+          -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+          "${{ env.DEPLOY_IMAGE }}" \
+          node -e "const mysql=require('mysql2/promise'); (async()=>{ const conn=await mysql.createConnection(process.env.DATABASE_URL); await conn.ping(); await conn.end(); console.log('✅ DB Ping Successful'); })();"
+
+    # Step 2: Recover the known MySQL 1267 failure when present, then perform
+    # the normal checksum preflight in the same container to avoid an extra
+    # CI/CD step and container startup.
+    - name: Migration recovery and checksum preflight
+      run: |
+        sudo docker volume create ahealthplace-db-backups >/dev/null
+        sudo docker run --rm \
+          --network ahealthplace-network \
+          -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+          -e MIGRATION_BACKUP_DIR="/backups" \
+          -v ahealthplace-db-backups:/backups \
+          "${{ env.DEPLOY_IMAGE }}" \
+          sh -c 'node scripts/recover-failed-comment-migration.mjs && npm run db:verify-checksums'
+
+    - name: Run database migrations
+      run: |
+        sudo docker run --rm \
+          --network ahealthplace-network \
+          -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+          "${{ env.DEPLOY_IMAGE }}" \
+          npx prisma migrate deploy --schema=prisma/schema.prisma
+
+    - name: Verify migration status
+      run: |
+        sudo docker run --rm \
+          --network ahealthplace-network \
+          -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+          "${{ env.DEPLOY_IMAGE }}" \
+          npx prisma migrate status --schema=prisma/schema.prisma
+
+    - name: Verify production schema and route smoke query groups
+      run: |
+        sudo docker run --rm \
+          --network ahealthplace-network \
+          -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+          "${{ env.DEPLOY_IMAGE }}" \
+          npm run db:verify
+
+    - name: Stop and remove previous container safely
+      id: stop_old_container
+      run: |
+        sudo docker stop ahealthplace-next-container 2>/dev/null || true
+        sudo docker rm -f ahealthplace-next-container 2>/dev/null || true
+        echo "OLD_CONTAINER_REMOVED=true" >> "$GITHUB_ENV"
+
+    - name: Start new candidate container
+      id: start_container
+      run: |
+        sudo docker run -d -p 3000:3000 --name ahealthplace-next-container \
+          --network ahealthplace-network \
+          -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+          -e DATABASE_CONNECTION_LIMIT="${{ secrets.DATABASE_CONNECTION_LIMIT }}" \
+          -e SITE_ID="${{ secrets.SITE_ID }}" \
+          -e NEXT_PUBLIC_SITE_ID="${{ secrets.NEXT_PUBLIC_SITE_ID }}" \
+          -e NEXT_PUBLIC_BASE_URL="${{ secrets.NEXT_PUBLIC_BASE_URL }}" \
+          -e NEXT_PUBLIC_APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL }}" \
+          -e NEXT_PUBLIC_CMS_BASE_URL="${{ secrets.NEXT_PUBLIC_CMS_BASE_URL }}" \
+          -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
+          -e ALLOWED_CORS_ORIGINS="${{ secrets.ALLOWED_CORS_ORIGINS }}" \
+          -e NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}" \
+          -e NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}" \
+          -e DASHBOARD_AUTH_COOKIE_SECURE="${{ secrets.DASHBOARD_AUTH_COOKIE_SECURE }}" \
+          -e TOTP_ISSUER="${{ secrets.TOTP_ISSUER }}" \
+          -e CMS_INTEGRATION_KEY="${{ secrets.CMS_INTEGRATION_KEY }}" \
+          -e RECAPTCHA_SITE_KEY="${{ secrets.RECAPTCHA_SITE_KEY }}" \
+          -e NEXT_PUBLIC_RECAPTCHA_SITE_KEY="${{ secrets.NEXT_PUBLIC_RECAPTCHA_SITE_KEY }}" \
+          -e NODE_ENV=production \
+          -e FORCE_S3=true \
+          -e ALLOW_LOCAL_MEDIA_STORAGE=false \
+          -e CRON_SECRET="${{ secrets.CRON_SECRET }}" \
+          -e S3_ENDPOINT="${{ secrets.S3_ENDPOINT }}" \
+          -e S3_REGION="${{ secrets.S3_REGION }}" \
+          -e S3_BUCKET="${{ secrets.S3_BUCKET }}" \
+          -e S3_ACCESS_KEY="${{ secrets.S3_ACCESS_KEY }}" \
+          -e S3_SECRET_KEY="${{ secrets.S3_SECRET_KEY }}" \
+          -e CLOUDINARY_CLOUD_NAME="${{ secrets.CLOUDINARY_CLOUD_NAME }}" \
+          -e CLOUDINARY_API_KEY="${{ secrets.CLOUDINARY_API_KEY }}" \
+          -e CLOUDINARY_API_SECRET="${{ secrets.CLOUDINARY_API_SECRET }}" \
+          -e REDIS_URL="${{ secrets.REDIS_URL }}" \
+          -e DISABLE_BULL_WORKERS="${{ secrets.DISABLE_BULL_WORKERS }}" \
+          -e TYPESENSE_HOST="${{ secrets.TYPESENSE_HOST }}" \
+          -e TYPESENSE_PORT="${{ secrets.TYPESENSE_PORT }}" \
+          -e TYPESENSE_PROTOCOL="${{ secrets.TYPESENSE_PROTOCOL }}" \
+          -e TYPESENSE_ADMIN_API_KEY="${{ secrets.TYPESENSE_ADMIN_API_KEY }}" \
+          -e TYPESENSE_COLLECTION_ALIAS="${{ secrets.TYPESENSE_COLLECTION_ALIAS }}" \
+          -e SMTP_HOST="${{ secrets.SMTP_HOST }}" \
+          -e SMTP_PORT="${{ secrets.SMTP_PORT }}" \
+          -e SMTP_USER="${{ secrets.SMTP_USER }}" \
+          -e SMTP_PASS="${{ secrets.SMTP_PASS }}" \
+          -e FORM_EMAIL="${{ secrets.FORM_EMAIL }}" \
+          -e NOVU_API_KEY="${{ secrets.NOVU_API_KEY }}" \
+          -e NOVU_WORKFLOW_ID="${{ secrets.NOVU_WORKFLOW_ID }}" \
+          -e NOVU_ENABLE_CAMPAIGN_TRIGGER="${{ secrets.NOVU_ENABLE_CAMPAIGN_TRIGGER }}" \
+          -e STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}" \
+          -e STRIPE_WEBHOOK_SECRET="${{ secrets.STRIPE_WEBHOOK_SECRET }}" \
+          -e NEXT_PUBLIC_SENTRY_DSN="${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}" \
+          -e SENTRY_DSN="${{ secrets.SENTRY_DSN }}" \
+          -e SENTRY_ENVIRONMENT="${{ secrets.SENTRY_ENVIRONMENT }}" \
+          -e SENTRY_RELEASE="${{ secrets.SENTRY_RELEASE }}" \
+          -e SENTRY_AUTH_TOKEN="${{ secrets.SENTRY_AUTH_TOKEN }}" \
+          -e SENTRY_ORG="${{ secrets.SENTRY_ORG }}" \
+          -e SENTRY_PROJECT="${{ secrets.SENTRY_PROJECT }}" \
+          -e SENTRY_PROJECT_URL="${{ secrets.SENTRY_PROJECT_URL }}" \
+          -e GRAFANA_LOKI_HOST="${{ secrets.GRAFANA_LOKI_HOST }}" \
+          -e GRAFANA_LOKI_URL="${{ secrets.GRAFANA_LOKI_URL }}" \
+          -e GRAFANA_LOKI_USER="${{ secrets.GRAFANA_LOKI_USER }}" \
+          -e GRAFANA_LOKI_API_KEY="${{ secrets.GRAFANA_LOKI_API_KEY }}" \
+          -e GRAFANA_LOKI_ENDPOINT="${{ secrets.GRAFANA_LOKI_ENDPOINT }}" \
+          -e GRAFANA_DASHBOARD_URL="${{ secrets.GRAFANA_DASHBOARD_URL }}" \
+          -e GRAFANA_SYNTHETIC_CHECK_URL="${{ secrets.GRAFANA_SYNTHETIC_CHECK_URL }}" \
+          -e OBSERVABILITY_TEST_ENABLED="${{ secrets.OBSERVABILITY_TEST_ENABLED }}" \
+          -e SEED_ADMIN_EMAIL="${{ secrets.SEED_ADMIN_EMAIL }}" \
+          -e SEED_ADMIN_PASSWORD="${{ secrets.SEED_ADMIN_PASSWORD }}" \
+          -e NODE_OPTIONS="${{ secrets.NODE_OPTIONS }}" \
+          "${{ env.DEPLOY_IMAGE }}"
+
+    - name: Readiness health check (HTTP 200 required)
+      id: readiness
+      run: |
+        echo "Waiting for application to become ready..."
+        for i in $(seq 1 20); do
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/health || echo "000")
+          echo "  Attempt ${i}/20 — HTTP ${STATUS}"
+          if [ "${STATUS}" = "200" ]; then
+            echo "✅ Application is ready."
+            exit 0
+          fi
+          sleep 3
+        done
+        echo "❌ Readiness check failed — application did not return HTTP 200."
+        exit 1
+
+    - name: Public HTTP route smoke checks (HTTP 200 required)
+      id: route_checks
+      run: |
+        echo "Running public HTTP route smoke checks..."
+        ROUTES=("/blogs" "/services")
+        for ROUTE in "${ROUTES[@]}"; do
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:3000${ROUTE}" || echo "000")
+          echo "  Route ${ROUTE} — HTTP ${STATUS}"
+          if [ "${STATUS}" != "200" ]; then
+            echo "❌ Route ${ROUTE} returned HTTP ${STATUS} (expected 200)!"
+            exit 1
+          fi
+        done
+        echo "✅ Public route HTTP 200 smoke checks passed."
+
+    - name: Rollback on container startup, readiness, or route verification failure
+      if: failure() && env.OLD_CONTAINER_REMOVED == 'true'
+      run: |
+        echo "⚠️ Deployment verification failed. Rolling back to previous container image..."
+        sudo docker stop ahealthplace-next-container 2>/dev/null || true
+        sudo docker rm -f ahealthplace-next-container 2>/dev/null || true
+
+        PREV_IMAGE="${{ env.PREV_IMAGE }}"
+        if [ -n "${PREV_IMAGE}" ]; then
+          echo "Restoring previous container image: ${PREV_IMAGE}"
+          sudo docker run -d -p 3000:3000 --name ahealthplace-next-container \
+            --network ahealthplace-network \
+            -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            -e DATABASE_CONNECTION_LIMIT="${{ secrets.DATABASE_CONNECTION_LIMIT }}" \
+            -e SITE_ID="${{ secrets.SITE_ID }}" \
+            -e NEXT_PUBLIC_SITE_ID="${{ secrets.NEXT_PUBLIC_SITE_ID }}" \
+            -e NEXT_PUBLIC_BASE_URL="${{ secrets.NEXT_PUBLIC_BASE_URL }}" \
+            -e NEXT_PUBLIC_APP_URL="${{ secrets.NEXT_PUBLIC_APP_URL }}" \
+            -e NEXT_PUBLIC_CMS_BASE_URL="${{ secrets.NEXT_PUBLIC_CMS_BASE_URL }}" \
+            -e FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
+            -e ALLOWED_CORS_ORIGINS="${{ secrets.ALLOWED_CORS_ORIGINS }}" \
+            -e NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}" \
+            -e NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}" \
+            -e DASHBOARD_AUTH_COOKIE_SECURE="${{ secrets.DASHBOARD_AUTH_COOKIE_SECURE }}" \
+            -e TOTP_ISSUER="${{ secrets.TOTP_ISSUER }}" \
+            -e CMS_INTEGRATION_KEY="${{ secrets.CMS_INTEGRATION_KEY }}" \
+            "${PREV_IMAGE}"
+          echo "✅ Previous container restored successfully."
+        else
+          echo "No previous image found — cannot restore automatically."
+        fi
+        exit 1
+
+    - name: Cleanup old image artifacts
+      if: success()
+      run: |
+        sudo docker image prune -f

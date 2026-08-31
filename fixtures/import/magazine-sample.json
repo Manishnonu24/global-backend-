@@ -1,0 +1,18 @@
+[
+  {
+    "title": "Wellness Monthly Jan",
+    "magazine_cover_image": "/images/mag-jan.jpg",
+    "slug": "wellness-monthly-jan",
+    "description": "January special on winter nutrition",
+    "category": "Nutrition",
+    "magazineId": "mag-jan-2026"
+  },
+  {
+    "title": "Wellness Monthly Feb",
+    "magazine_cover_image": "/images/mag-feb.jpg",
+    "slug": "wellness-monthly-feb",
+    "description": "February issue on heart health",
+    "category": "Cardio",
+    "magazineId": "mag-feb-2026"
+  }
+]

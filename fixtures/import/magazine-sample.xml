@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<magazines>
+  <magazine>
+    <title>Natural Healing Vol 1</title>
+    <slug>natural-healing-vol-1</slug>
+    <cover_image>/images/nh-1.jpg</cover_image>
+    <description>Volume 1 on herbal remedies</description>
+    <magazineId>mag-nh-1</magazineId>
+  </magazine>
+  <magazine>
+    <title>Natural Healing Vol 2</title>
+    <slug>natural-healing-vol-2</slug>
+    <cover_image>/images/nh-2.jpg</cover_image>
+    <description>Volume 2 on yoga and pranayama</description>
+    <magazineId>mag-nh-2</magazineId>
+  </magazine>
+</magazines>

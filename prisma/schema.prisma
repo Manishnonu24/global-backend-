@@ -1,0 +1,1318 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model QuizType {
+  id               Int      @id @default(autoincrement())
+  slug             String   @unique
+  title            String   @db.VarChar(200)
+  subtitle         String?  @db.VarChar(300)
+  description      String   @db.Text
+  category         String
+  categoryColor    String   @default("#0f7c85") @db.VarChar(20)
+  imageUrl         String?  @db.VarChar(500)
+  icon             String?  @db.VarChar(10)
+  estimatedMinutes Int      @default(5)
+  difficulty       String   @default("Beginner")
+  isActive         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  canonicalUrl     String?  @db.VarChar(255)
+  jsonLd           Json?
+  ogImage          String?  @db.VarChar(255)
+  seoDescription   String?  @db.Text
+  seoTitle         String?  @db.VarChar(255)
+  siteId           String?
+
+  @@map("quiz_types")
+}
+
+model Quiz {
+  id            Int     @id @default(autoincrement()) @map("_id")
+  category      String? @default("general-wellness")
+  question      String  @db.Text
+  options       String  @db.Text
+  correctAnswer String  @db.Text
+  explanation   String  @db.Text
+
+  @@map("quizzes")
+}
+
+model IpQuizAnalytic {
+  id      Int    @id @default(autoincrement())
+  user_ip String
+  played  Int    @default(0)
+
+  @@map("ip_quiz_analytic")
+}
+
+model QuizAnalytics {
+  id            Int    @id @default(autoincrement())
+  userId        String @db.VarChar(255)
+  quizId        Int
+  correct       Int
+  choose_option String @db.VarChar(255)
+  time_taken    String @db.VarChar(255)
+
+  @@map("quiz_analytics")
+}
+
+model Magazine {
+  id               Int       @id @default(autoincrement()) @map("idMagazines")
+  magazineId       String    @map("magazine_id") @db.VarChar(255)
+  title            String    @map("magazine_title") @db.VarChar(255)
+  description      String    @map("magazine_description") @db.Text
+  introduction     String?   @map("magazine_introduction") @db.Text
+  backImage        String?   @map("magazine_back_image") @db.VarChar(255)
+  spineImage       String?   @map("magazine_spine_image") @db.VarChar(255)
+  tags             String    @map("magazine_tags") @db.VarChar(255)
+  coverImage       String    @map("magazine_cover_image") @db.VarChar(255)
+  link             String    @map("magazine_link") @db.VarChar(255)
+  date             DateTime  @map("magazine_date") @db.Date
+  category         String    @map("magazine_category") @db.VarChar(255)
+  magCloudLink     String    @map("MagCloudLink") @db.VarChar(255)
+  slug             String    @unique @map("magazine_slug")
+  status           Int       @default(1)
+  timestamp        DateTime  @default(now()) @map("magazine_timestamp")
+  publisherSocials Json?     @map("publisher_socials")
+  insideIssue      Json?     @map("inside_issue")
+  canonicalUrl     String?   @map("canonical_url") @db.VarChar(255)
+  jsonLd           Json?     @map("json_ld")
+  ogImage          String?   @map("og_image") @db.VarChar(255)
+  seoDescription   String?   @map("seo_description") @db.Text
+  seoTitle         String?   @map("seo_title") @db.VarChar(255)
+  siteId           String?   @map("site_id")
+  comments         comment[]
+
+  @@index([siteId, status, date], map: "Magazine_siteId_status_date_idx")
+  @@index([status, date], map: "Magazine_status_date_idx")
+  @@index([magazineId], map: "Magazine_magazineId_idx")
+  @@index([date], map: "Magazine_date_idx")
+  @@map("magazines")
+}
+
+model Auth {
+  id           Int       @id @default(autoincrement()) @map("idauth")
+  name         String?   @db.VarChar(255)
+  username     String?   @unique
+  email        String?   @unique
+  password     String?   @db.VarChar(255)
+  role         String?   @default("user")
+  profile      String?   @db.VarChar(255)
+  profession   String?   @db.VarChar(255)
+  bio          String?   @db.Text
+  date         DateTime  @default(now())
+  otp          String?
+  otpCreatedAt DateTime?
+
+  @@map("auth")
+}
+
+model LegacyAd {
+  id             Int       @id @default(autoincrement())
+  title          String    @db.VarChar(255)
+  description    String?   @db.Text
+  mediaUrl       String    @map("media_url") @db.Text
+  mediaType      String    @default("image") @map("media_type") @db.VarChar(20)
+  targetUrl      String    @map("target_url") @db.Text
+  placement      String
+  status         String    @default("draft") @db.VarChar(20)
+  priority       Int       @default(1)
+  startDate      DateTime? @map("start_date")
+  endDate        DateTime? @map("end_date")
+  targetDevice   String?   @map("target_device") @db.VarChar(20)
+  targetLocation String?   @map("target_location")
+  createdBy      Int?      @map("created_by")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@index([placement, status])
+  @@map("ads")
+}
+
+model LegacyAdEvent {
+  id        Int      @id @default(autoincrement())
+  adId      Int      @map("ad_id")
+  eventType String   @map("event_type") @db.VarChar(10)
+  userIp    String?  @map("user_ip") @db.VarChar(45)
+  userAgent String?  @map("user_agent") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([adId, eventType])
+  @@map("ad_events")
+}
+
+model CommunityEvent {
+  id            String   @id @default(cuid())
+  siteId        String
+  title         String
+  category      String   @default("MINDFULNESS WALK")
+  description   String   @db.Text
+  imageUrl      String?
+  eventDate     String?  @default("Sat, 27 July 2024")
+  eventTime     String?  @default("9:00 AM – 11:30 AM")
+  location      String?  @default("City Nature Park")
+  tags          String?  @default("Mindfulness, Outdoor, Beginner Friendly")
+  reservedSeats Int      @default(45)
+  totalSeats    Int      @default(60)
+  isFeatured    Boolean  @default(true)
+  status        String   @default("active")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([siteId, isFeatured])
+  @@map("community_events")
+}
+
+model ad {
+  id           String       @id @default(cuid())
+  zoneId       String
+  advertiserId String?
+  campaignId   String?
+  name         String
+  type         String
+  code         String?      @db.Text
+  imageUrl     String?
+  targetUrl    String?
+  isActive     Boolean      @default(true)
+  status       String       @default("draft")
+  startDate    DateTime?
+  endDate      DateTime?
+  priority     Int          @default(50)
+  targeting    String?      @db.Text
+  scheduling   String?      @db.Text
+  impressions  Int          @default(0)
+  clicks       Int          @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  ctaText      String?
+  description  String?      @db.Text
+  headline     String?
+  maxClicks    Int?
+  ctaColor     String?      @db.VarChar(20)
+  zone         adzone       @relation(fields: [zoneId], references: [id])
+  advertiser   advertiser?  @relation(fields: [advertiserId], references: [id], onDelete: SetNull)
+  campaign     adcampaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  analytics    adanalytic[]
+
+  @@index([advertiserId], map: "Ad_advertiserId_idx")
+  @@index([campaignId], map: "Ad_campaignId_idx")
+  @@index([zoneId], map: "Ad_zoneId_idx")
+}
+
+model adanalytic {
+  id        String   @id @default(cuid())
+  adId      String
+  type      String
+  visitorId String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  ad        ad       @relation(fields: [adId], references: [id], onDelete: Cascade)
+
+  @@index([adId], map: "AdAnalytic_adId_idx")
+}
+
+model adcampaign {
+  id          String    @id @default(cuid())
+  siteId      String
+  name        String
+  description String?   @db.Text
+  budget      Float?
+  startDate   DateTime?
+  endDate     DateTime?
+  status      String    @default("active")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  ads         ad[]
+
+  @@index([siteId], map: "AdCampaign_siteId_idx")
+}
+
+model advertiser {
+  id          String   @id @default(cuid())
+  siteId      String
+  companyName String
+  contactName String?
+  email       String?
+  phone       String?
+  website     String?
+  logo        String?
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  ads         ad[]
+
+  @@index([siteId], map: "Advertiser_siteId_idx")
+}
+
+model adzone {
+  id        String   @id @default(cuid())
+  siteId    String   @db.VarChar(100)
+  name      String
+  slug      String   @db.VarChar(100)
+  width     Int?
+  height    Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ads       ad[]
+
+  @@unique([siteId, slug], map: "AdZone_siteId_slug_key")
+  @@index([siteId], map: "AdZone_siteId_idx")
+}
+
+model apikey {
+  id        String    @id @default(cuid())
+  siteId    String
+  name      String
+  key       String    @unique(map: "ApiKey_key_key")
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([siteId], map: "ApiKey_siteId_idx")
+}
+
+model auditlog {
+  id        String   @id @default(cuid())
+  siteId    String?
+  userId    String?
+  action    String
+  meta      Json?
+  createdAt DateTime @default(now())
+  user      user?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt], map: "AuditLog_createdAt_idx")
+  @@index([siteId], map: "AuditLog_siteId_idx")
+  @@index([userId], map: "AuditLog_userId_idx")
+}
+
+model campaignlog {
+  id           String        @id @default(cuid())
+  campaignId   String        @db.VarChar(100)
+  subscriberId String        @db.VarChar(100)
+  status       String        @default("pending")
+  errorMessage String?       @db.Text
+  sentAt       DateTime?
+  openedAt     DateTime?
+  clickedAt    DateTime?
+  campaign     emailcampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  subscriber   subscriber    @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, subscriberId], map: "CampaignLog_campaignId_subscriberId_key")
+  @@index([campaignId], map: "CampaignLog_campaignId_idx")
+  @@index([subscriberId], map: "CampaignLog_subscriberId_idx")
+}
+
+model category {
+  id        String    @id @default(cuid()) @db.VarChar(50)
+  siteId    String    @db.VarChar(100)
+  name      String    @db.VarChar(100)
+  slug      String    @db.VarChar(100)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  posts     post[]    @relation("CategoryToPost")
+
+  @@unique([siteId, name], map: "Category_siteId_name_key")
+  @@unique([siteId, slug], map: "Category_siteId_slug_key")
+  @@index([siteId], map: "Category_siteId_idx")
+}
+
+model comment {
+  id          String    @id @default(cuid())
+  siteId      String
+  postId      String?   @db.VarChar(50)
+  magazineId  Int?
+  authorName  String
+  authorEmail String
+  content     String    @db.Text
+  status      String    @default("pending")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  post        post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  magazine    Magazine? @relation(fields: [magazineId], references: [id], onDelete: Cascade)
+
+  @@index([postId], map: "Comment_postId_idx")
+  @@index([magazineId], map: "Comment_magazineId_idx")
+  @@index([siteId], map: "Comment_siteId_idx")
+  @@index([siteId, postId, status, createdAt], map: "Comment_siteId_postId_status_createdAt_idx")
+}
+
+model contactformsubmission {
+  id        String    @id @default(cuid())
+  siteId    String
+  name      String
+  email     String
+  phone     String?
+  message   String    @db.Text
+  status    String    @default("new") @db.VarChar(20)
+  notes     String?   @db.Text
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([siteId], map: "ContactFormSubmission_siteId_idx")
+  @@index([siteId, status], map: "ContactFormSubmission_siteId_status_idx")
+}
+
+model contentversion {
+  id         String   @id @default(cuid())
+  siteId     String   @db.VarChar(100)
+  entityType String   @db.VarChar(20)
+  entityId   String   @db.VarChar(36)
+  version    Int
+  data       Json
+  createdBy  String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt], map: "ContentVersion_createdAt_idx")
+  @@index([siteId, entityType, entityId], map: "ContentVersion_siteId_entityType_entityId_idx")
+  @@index([siteId, entityType, entityId, version], map: "ContentVersion_siteId_entityType_entityId_version_idx")
+}
+
+model cookieconsentlog {
+  id        String   @id @default(cuid())
+  siteId    String
+  visitorId String
+  accepted  Boolean  @default(false)
+  analytics Boolean  @default(false)
+  marketing Boolean  @default(false)
+  ipHash    String?
+  createdAt DateTime @default(now())
+
+  @@index([siteId], map: "CookieConsentLog_siteId_idx")
+}
+
+model emailcampaign {
+  id                String             @id @default(cuid())
+  siteId            String
+  name              String
+  subject           String
+  body              String             @db.LongText
+  listId            String?
+  status            String             @default("draft")
+  scheduledAt       DateTime?
+  sentAt            DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  list              subscriberlist?    @relation(fields: [listId], references: [id], onDelete: SetNull)
+  logs              campaignlog[]
+  pushNotifications pushnotification[]
+  emailLogs         emaillog[]
+
+  @@index([listId], map: "EmailCampaign_listId_fkey")
+  @@index([siteId], map: "EmailCampaign_siteId_idx")
+}
+
+model emaillog {
+  id           String    @id @default(cuid()) @db.VarChar(50)
+  siteId       String    @db.VarChar(100)
+  category     String    @db.VarChar(50) // "transactional" | "campaign" | "system"
+  triggerKey   String?   @db.VarChar(100) // e.g. "password_reset", "otp_verification" — null for campaigns
+  campaignId   String?   @db.VarChar(100) // set when category = "campaign", FK to emailcampaign
+  templateId   String?   @db.VarChar(100) // emailtemplate.id when a stored template was used
+  toEmail      String    @db.VarChar(191)
+  toName       String?   @db.VarChar(191)
+  fromEmail    String?   @db.VarChar(191)
+  subject      String?   @db.Text
+  provider     String?   @db.VarChar(50) // "resend" | "sendgrid" | "smtp"
+  status       String    @default("queued") @db.VarChar(20) // queued | sending | sent | failed
+  errorMessage String?   @db.Text
+  bodyPreview  String?   @db.Text // stripped-tag first ~500 chars, not full HTML, to keep rows small
+  meta         Json? // { userId, ip, source route, jobId, etc. }
+  sentAt       DateTime?
+  createdAt    DateTime  @default(now())
+
+  campaign emailcampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([siteId, createdAt], map: "EmailLog_siteId_createdAt_idx")
+  @@index([siteId, status], map: "EmailLog_siteId_status_idx")
+  @@index([toEmail], map: "EmailLog_toEmail_idx")
+  @@index([triggerKey], map: "EmailLog_triggerKey_idx")
+}
+
+model emailtemplate {
+  id          String   @id @default(cuid())
+  siteId      String
+  name        String
+  triggerKey  String?
+  subject     String?
+  htmlContent String   @db.LongText
+  designJson  String?  @db.LongText
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([siteId], map: "EmailTemplate_siteId_idx")
+  @@index([siteId, triggerKey], map: "EmailTemplate_siteId_triggerKey_idx")
+}
+
+model faq {
+  id           String    @id @default(cuid())
+  siteId       String
+  question     String
+  answer       String    @db.Text
+  pageId       String?
+  sortOrder    Int       @default(0)
+  showHide     Boolean   @default(true)
+  schemaMarkup Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+  page         page?     @relation(fields: [pageId], references: [id], onDelete: SetNull)
+
+  @@index([pageId], map: "Faq_pageId_idx")
+  @@index([siteId], map: "Faq_siteId_idx")
+  @@index([siteId, sortOrder], map: "Faq_siteId_sortOrder_idx")
+}
+
+model frontendproject {
+  id               String    @id @default(cuid())
+  siteId           String
+  name             String
+  framework        String
+  apiKey           String    @unique(map: "FrontendProject_apiKey_key")
+  isActive         Boolean   @default(true)
+  lastSyncAt       DateTime?
+  baseUrl          String?
+  sdkVersion       String?
+  syncStatus       String?
+  lastManifestHash String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([siteId], map: "FrontendProject_siteId_idx")
+  @@index([siteId, isActive], map: "FrontendProject_siteId_isActive_idx")
+}
+
+model globalsettings {
+  id                String    @id @default(cuid())
+  siteId            String    @unique(map: "GlobalSettings_siteId_key")
+  header            Json?
+  footer            Json?
+  analytics         Json?
+  scripts           Json?
+  contactDetails    Json?
+  websiteSettings   Json?
+  emailSettings     Json?
+  securityControls  Json?
+  compliance        Json?
+  notifications     Json?
+  ctaConfig         Json?
+  performanceConfig Json?
+  devTools          Json?
+  deploymentNotes   Json?
+  navigation        Json?
+  adSettings        Json?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  @@index([siteId], map: "GlobalSettings_siteId_idx")
+}
+
+model importbatch {
+  id           String         @id @default(cuid())
+  siteId       String
+  sourceType   String         @db.VarChar(20)
+  targetModel  String         @db.VarChar(50)
+  fileName     String         @db.VarChar(255)
+  status       String         @default("PENDING") @db.VarChar(20)
+  totalRows    Int            @default(0)
+  successRows  Int            @default(0)
+  failedRows   Int            @default(0)
+  errorLog     Json?
+  createdBy    String?
+  createdAt    DateTime       @default(now())
+  completedAt  DateTime?
+  rolledBackAt DateTime?
+  records      importrecord[]
+
+  @@index([siteId], map: "ImportBatch_siteId_idx")
+  @@index([status], map: "ImportBatch_status_idx")
+}
+
+model importrecord {
+  id           String      @id @default(cuid())
+  batchId      String
+  targetModel  String      @db.VarChar(50)
+  recordId     String      @db.VarChar(100)
+  action       String      @db.VarChar(20)
+  previousData Json?
+  createdAt    DateTime    @default(now())
+  batch        importbatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId], map: "ImportRecord_batchId_idx")
+  @@index([targetModel, recordId], map: "ImportRecord_targetModel_recordId_idx")
+}
+
+model integrationmanifest {
+  id           String   @id @default(cuid())
+  siteId       String
+  source       String?
+  manifestHash String?
+  rawJson      Json
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt], map: "IntegrationManifest_createdAt_idx")
+  @@index([siteId], map: "IntegrationManifest_siteId_idx")
+}
+
+model ipblock {
+  id        String   @id @default(cuid())
+  siteId    String   @db.VarChar(100)
+  ipAddress String   @db.VarChar(45)
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@unique([siteId, ipAddress], map: "IpBlock_siteId_ipAddress_key")
+  @@index([siteId], map: "IpBlock_siteId_idx")
+}
+
+model lead {
+  id              String    @id @default(cuid())
+  siteId          String
+  name            String
+  email           String
+  phone           String?
+  serviceInterest String?
+  sourcePage      String?
+  status          String    @default("new") @db.VarChar(20)
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  @@index([siteId], map: "Lead_siteId_idx")
+  @@index([siteId, status], map: "Lead_siteId_status_idx")
+}
+
+model legalpage {
+  id             String    @id @default(cuid())
+  siteId         String    @db.VarChar(100)
+  type           String    @db.VarChar(100)
+  title          String
+  content        String    @db.LongText
+  contentJson    String?   @db.LongText
+  published      Boolean   @default(false)
+  lastUpdated    DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+  canonicalUrl   String?
+  jsonLd         Json?
+  ogImage        String?
+  seoDescription String?   @db.Text
+  seoTitle       String?
+
+  @@unique([siteId, type], map: "LegalPage_siteId_type_key")
+  @@index([siteId], map: "LegalPage_siteId_idx")
+  @@index([type], map: "LegalPage_type_idx")
+}
+
+model loginhistory {
+  id        String   @id @default(cuid())
+  userId    String
+  ipAddress String?
+  userAgent String?
+  success   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt], map: "LoginHistory_createdAt_idx")
+  @@index([userId], map: "LoginHistory_userId_idx")
+}
+
+model media {
+  id               String       @id @default(cuid())
+  siteId           String
+  fileName         String
+  originalName     String?
+  publicId         String
+  url              String
+  secureUrl        String?
+  mimeType         String?
+  extension        String?
+  size             Int?
+  width            Int?
+  height           Int?
+  altText          String?
+  isImage          Boolean      @default(false)
+  isVideo          Boolean      @default(false)
+  isDocument       Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  deletedAt        DateTime?
+  folderId         String?
+  folder           mediafolder? @relation("MediaInFolder", fields: [folderId], references: [id], onDelete: SetNull)
+  featuredPosts    post[]       @relation("PostFeaturedImage")
+  featuredServices service[]    @relation("ServiceFeaturedImage")
+
+  @@index([folderId], map: "Media_folderId_fkey")
+  @@index([siteId], map: "Media_siteId_idx")
+}
+
+model mediafolder {
+  id        String        @id @default(cuid())
+  siteId    String
+  name      String
+  parentId  String?
+  createdAt DateTime      @default(now())
+  deletedAt DateTime?
+  media     media[]       @relation("MediaInFolder")
+  children  mediafolder[] @relation("FolderHierarchy")
+  parent    mediafolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([parentId], map: "MediaFolder_parentId_fkey")
+  @@index([siteId], map: "MediaFolder_siteId_idx")
+}
+
+model newsletter {
+  id        String   @id @default(cuid())
+  siteId    String
+  email     String
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+
+  @@index([siteId], map: "Newsletter_siteId_idx")
+}
+
+model notificationalert {
+  id        String   @id @default(cuid())
+  siteId    String
+  title     String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt], map: "NotificationAlert_createdAt_idx")
+  @@index([siteId], map: "NotificationAlert_siteId_idx")
+  @@index([siteId, createdAt], map: "NotificationAlert_siteId_createdAt_idx")
+  @@index([siteId, isRead], map: "NotificationAlert_siteId_isRead_idx")
+}
+
+model page {
+  id                String        @id @default(cuid())
+  siteId            String        @db.VarChar(100)
+  title             String
+  slug              String        @db.VarChar(100)
+  status            page_status   @default(DRAFT)
+  jsonLd            Json?
+  seoTitle          String?
+  seoKeywords       String?       @db.Text
+  seoDescription    String?       @db.Text
+  canonicalUrl      String?
+  ogImage           String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  deletedAt         DateTime?
+  publishedAt       DateTime?
+  publishedBy       String?
+  isDiscovered      Boolean       @default(false)
+  isManagedBySync   Boolean       @default(true)
+  isHardcoded       Boolean       @default(false)
+  sourceRoute       String?
+  priority          Float?
+  changeFreq        String?
+  isEnabled         Boolean       @default(true)
+  pageType          page_pageType @default(CMS_BUILT)
+  publishedSnapshot Json?
+  showInNav         Boolean       @default(true)
+  templateKey       String?
+  templateVersion   String?
+  sections          section[]
+  faqs              faq[]
+  site              site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, slug], map: "Page_siteId_slug_key")
+  @@index([siteId], map: "Page_siteId_idx")
+  @@index([siteId, deletedAt, updatedAt], map: "Page_siteId_deletedAt_updatedAt_idx")
+}
+
+model passwordreset {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique(map: "PasswordReset_token_key")
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt], map: "PasswordReset_expiresAt_idx")
+  @@index([userId], map: "PasswordReset_userId_idx")
+}
+
+model post {
+  id               String         @id @default(cuid()) @db.VarChar(50)
+  siteId           String         @db.VarChar(100)
+  title            String
+  slug             String         @db.VarChar(100)
+  content          Json?
+  contentJson      String?        @db.LongText
+  excerpt          String?        @db.Text
+  status           post_status    @default(DRAFT)
+  authorId         String?
+  featuredImageId  String?
+  seoTitle         String?
+  seoDescription   String?        @db.Text
+  canonicalUrl     String?        @db.VarChar(500)
+  ogImage          String?        @db.VarChar(500)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  deletedAt        DateTime?
+  publishedAt      DateTime?
+  publisherSocials Json?
+  jsonLd           Json?
+  author           user?          @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  categories       category[]     @relation("CategoryToPost")
+  comments         comment[]
+  featuredImage    media?         @relation("PostFeaturedImage", fields: [featuredImageId], references: [id], onDelete: SetNull)
+  savedBy          savedarticle[]
+  tags             tag[]          @relation("PostToTag")
+  site             site           @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, slug], map: "Post_siteId_slug_key")
+  @@index([authorId], map: "Post_authorId_idx")
+  @@index([featuredImageId], map: "Post_featuredImageId_idx")
+  @@index([siteId], map: "Post_siteId_idx")
+  @@index([siteId, status], map: "Post_siteId_status_idx")
+  @@index([siteId, status, deletedAt, publishedAt, createdAt], map: "Post_siteId_status_deletedAt_publishedAt_createdAt_idx")
+}
+
+model pushnotification {
+  id              String         @id @default(cuid())
+  siteId          String
+  emailCampaignId String?
+  title           String
+  message         String         @db.Text
+  url             String?
+  iconUrl         String?
+  imageUrl        String?
+  segment         String         @default("Subscribed Users")
+  filters         String?        @db.Text
+  status          String         @default("draft")
+  oneSignalId     String?
+  sentCount       Int            @default(0)
+  deliveredCount  Int            @default(0)
+  clickedCount    Int            @default(0)
+  failedCount     Int            @default(0)
+  scheduledAt     DateTime?
+  sentAt          DateTime?
+  isRecurring     Boolean        @default(false)
+  recurringRule   String?        @db.Text
+  sendToWebsite   Boolean        @default(true)
+  sendToDevice    Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  emailCampaign   emailcampaign? @relation(fields: [emailCampaignId], references: [id], onDelete: SetNull)
+
+  @@index([emailCampaignId], map: "PushNotification_emailCampaignId_idx")
+  @@index([siteId], map: "PushNotification_siteId_idx")
+  @@index([status], map: "PushNotification_status_idx")
+}
+
+model recentlyviewed {
+  id          String   @id @default(cuid())
+  userId      String   @db.VarChar(100)
+  contentType String   @db.VarChar(50)
+  contentId   String   @db.VarChar(100)
+  viewedAt    DateTime @default(now())
+
+  @@unique([userId, contentType, contentId], map: "RecentlyViewed_userId_contentType_contentId_key")
+  @@index([userId, viewedAt], map: "RecentlyViewed_userId_viewedAt_idx")
+}
+
+model recipe {
+  id            String        @id @default(cuid()) @db.VarChar(50)
+  siteId        String?
+  title         String
+  description   String?       @db.Text
+  ingredients   Json
+  steps         Json
+  cookingTime   Int?
+  calories      Int?
+  difficulty    String?
+  imageUrl      String?       @db.Text
+  status        recipe_status @default(PENDING)
+  contributorId String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+
+  protein        Float?
+  carbs          Float?
+  fiber          Float?
+  fat            Float?
+  sugar          Float?
+  canonicalUrl   String?
+  jsonLd         Json?
+  ogImage        String?
+  seoDescription String?          @db.Text
+  seoTitle       String?
+  allergens      recipeallergen[] @relation("RecipeToRecipeAllergen")
+  contributor    user             @relation("RecipeContributor", fields: [contributorId], references: [id], onDelete: Restrict)
+  savedBy        savedrecipe[]
+  tags           recipetag[]      @relation("RecipeToRecipeTag")
+  comments       recipecomment[]
+  likes          recipelike[]
+  ratings        reciperating[]
+
+  @@index([contributorId], map: "Recipe_contributorId_idx")
+  @@index([siteId], map: "Recipe_siteId_idx")
+  @@index([status], map: "Recipe_status_idx")
+  @@index([siteId, status, createdAt], map: "Recipe_siteId_status_createdAt_idx")
+}
+
+model recipeallergen {
+  id      String   @id @default(cuid()) @db.VarChar(50)
+  name    String   @unique(map: "RecipeAllergen_name_key") @db.VarChar(140)
+  recipes recipe[] @relation("RecipeToRecipeAllergen")
+}
+
+model recipecomment {
+  id        String   @id @default(cuid())
+  recipeId  String   @db.VarChar(50)
+  userId    String   @db.VarChar(191)
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  recipe recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user   user   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId], map: "RecipeComment_recipeId_fkey")
+  @@index([userId], map: "RecipeComment_userId_fkey")
+}
+
+model recipelike {
+  id        String   @id @default(cuid())
+  recipeId  String   @db.VarChar(50)
+  userId    String   @db.VarChar(191)
+  createdAt DateTime @default(now())
+
+  recipe recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user   user   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([recipeId, userId], map: "RecipeLike_recipeId_userId_key")
+  @@index([recipeId], map: "RecipeLike_recipeId_idx")
+  @@index([userId], map: "RecipeLike_userId_fkey")
+}
+
+model reciperating {
+  id        String   @id @default(cuid())
+  recipeId  String   @db.VarChar(50)
+  userId    String   @db.VarChar(191)
+  rating    Int
+  createdAt DateTime @default(now())
+
+  recipe recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user   user   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([recipeId, userId], map: "RecipeRating_recipeId_userId_key")
+  @@index([recipeId], map: "RecipeRating_recipeId_idx")
+  @@index([userId], map: "RecipeRating_userId_fkey")
+}
+
+model recipetag {
+  id      String   @id @default(cuid()) @db.VarChar(50)
+  name    String   @unique(map: "RecipeTag_name_key") @db.VarChar(140)
+  recipes recipe[] @relation("RecipeToRecipeTag")
+}
+
+model redirect {
+  id        String    @id @default(cuid())
+  siteId    String    @db.VarChar(100)
+  source    String    @db.VarChar(100)
+  target    String
+  type      Int       @default(301)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@unique([siteId, source], map: "Redirect_siteId_source_key")
+  @@index([siteId], map: "Redirect_siteId_idx")
+}
+
+model savedarticle {
+  id        String   @id @default(cuid())
+  postId    String   @db.VarChar(100)
+  userId    String   @db.VarChar(100)
+  createdAt DateTime @default(now())
+  post      post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId], map: "SavedArticle_postId_userId_key")
+  @@index([postId], map: "SavedArticle_postId_idx")
+  @@index([userId], map: "SavedArticle_userId_fkey")
+}
+
+model savedrecipe {
+  id        String   @id @default(cuid())
+  recipeId  String   @db.VarChar(50)
+  userId    String   @db.VarChar(191)
+  createdAt DateTime @default(now())
+  recipe    recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([recipeId, userId], map: "SavedRecipe_recipeId_userId_key")
+  @@index([recipeId], map: "SavedRecipe_recipeId_idx")
+  @@index([userId], map: "SavedRecipe_userId_fkey")
+}
+
+model section {
+  id        String    @id @default(cuid())
+  pageId    String
+  name      String?
+  type      String
+  order     Int       @default(0)
+  isVisible Boolean   @default(true)
+  isDeleted Boolean   @default(false)
+  content   Json
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  siteId    String?
+  regionKey String?
+  page      page      @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId], map: "Section_pageId_idx")
+  @@index([pageId, order], map: "Section_pageId_order_idx")
+}
+
+model service {
+  id              String             @id @default(cuid())
+  siteId          String             @db.VarChar(100)
+  title           String
+  description     String?            @db.Text
+  price           String?
+  ctaButtonText   String?
+  ctaButtonLink   String?
+  sortOrder       Int                @default(0)
+  status          service_status     @default(DRAFT)
+  visibility      service_visibility @default(PUBLIC)
+  slug            String?            @db.VarChar(100)
+  accessToken     String?            @unique(map: "Service_accessToken_key")
+  faqs            Json?
+  visible         Boolean            @default(true)
+  featuredImageId String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  deletedAt       DateTime?
+  canonicalUrl    String?
+  jsonLd          Json?
+  ogImage         String?
+  seoDescription  String?            @db.Text
+  seoTitle        String?
+  featuredImage   media?             @relation("ServiceFeaturedImage", fields: [featuredImageId], references: [id], onDelete: SetNull)
+  site            site               @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, slug], map: "Service_siteId_slug_key")
+  @@index([featuredImageId], map: "Service_featuredImageId_idx")
+  @@index([siteId], map: "Service_siteId_idx")
+  @@index([siteId, status, visible], map: "Service_siteId_status_visible_idx")
+  @@index([siteId, status, visible, deletedAt, sortOrder], map: "Service_siteId_status_visible_deletedAt_sortOrder_idx")
+}
+
+model site {
+  id             String     @id @default(cuid())
+  name           String
+  domain         String?    @unique(map: "Site_domain_key")
+  isActive       Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  deletedAt      DateTime?
+  integrationKey String?    @unique(map: "Site_integrationKey_key")
+  users          siteuser[]
+  services       service[]
+  posts          post[]
+  pages          page[]
+
+  @@index([isActive], map: "Site_isActive_idx")
+}
+
+model siteuser {
+  id        String        @id @default(cuid())
+  siteId    String        @db.VarChar(100)
+  userId    String        @db.VarChar(100)
+  role      siteuser_role @default(EDITOR)
+  createdAt DateTime      @default(now())
+  deletedAt DateTime?
+  user      user          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  site      site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, userId], map: "SiteUser_siteId_userId_key")
+  @@index([siteId], map: "SiteUser_siteId_idx")
+  @@index([userId], map: "SiteUser_userId_idx")
+}
+
+model subscriber {
+  id           String                 @id @default(cuid())
+  siteId       String                 @db.VarChar(100)
+  email        String                 @db.VarChar(100)
+  name         String?
+  status       String                 @default("active")
+  tags         String?                @db.Text
+  metadata     String?                @db.Text
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  campaignLogs campaignlog[]
+  lists        subscriberlistmember[]
+
+  @@unique([siteId, email], map: "Subscriber_siteId_email_key")
+  @@index([siteId], map: "Subscriber_siteId_idx")
+}
+
+model subscriberlist {
+  id          String                 @id @default(cuid())
+  siteId      String
+  name        String
+  description String?                @db.Text
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  campaigns   emailcampaign[]
+  subscribers subscriberlistmember[]
+
+  @@index([siteId], map: "SubscriberList_siteId_idx")
+}
+
+model subscriberlistmember {
+  id           String         @id @default(cuid())
+  listId       String         @db.VarChar(100)
+  subscriberId String         @db.VarChar(100)
+  createdAt    DateTime       @default(now())
+  list         subscriberlist @relation(fields: [listId], references: [id], onDelete: Cascade)
+  subscriber   subscriber     @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, subscriberId], map: "SubscriberListMember_listId_subscriberId_key")
+  @@index([listId], map: "SubscriberListMember_listId_idx")
+  @@index([subscriberId], map: "SubscriberListMember_subscriberId_idx")
+}
+
+model syncedroute {
+  id                String   @id @default(cuid())
+  frontendProjectId String   @db.VarChar(100)
+  route             String   @db.VarChar(100)
+  source            String?
+  discoveredAt      DateTime @default(now())
+  pageId            String?
+
+  @@unique([frontendProjectId, route], map: "SyncedRoute_frontendProjectId_route_key")
+  @@index([frontendProjectId], map: "SyncedRoute_frontendProjectId_idx")
+  @@index([pageId], map: "SyncedRoute_pageId_idx")
+}
+
+model systemerrorlog {
+  id        String   @id @default(cuid())
+  siteId    String?
+  message   String   @db.Text
+  stack     String?  @db.Text
+  context   Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt], map: "SystemErrorLog_createdAt_idx")
+  @@index([siteId], map: "SystemErrorLog_siteId_idx")
+}
+
+model tag {
+  id        String    @id @default(cuid()) @db.VarChar(50)
+  siteId    String    @db.VarChar(100)
+  name      String    @db.VarChar(100)
+  slug      String    @db.VarChar(100)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  posts     post[]    @relation("PostToTag")
+
+  @@unique([siteId, name], map: "Tag_siteId_name_key")
+  @@unique([siteId, slug], map: "Tag_siteId_slug_key")
+  @@index([siteId], map: "Tag_siteId_idx")
+}
+
+model teammember {
+  id          String    @id @default(cuid())
+  siteId      String
+  name        String
+  role        String
+  photo       String?
+  bio         String?   @db.Text
+  socialLinks Json?
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([siteId], map: "TeamMember_siteId_idx")
+  @@index([siteId, sortOrder], map: "TeamMember_siteId_sortOrder_idx")
+}
+
+model testimonial {
+  id          String    @id @default(cuid())
+  siteId      String
+  clientName  String
+  clientImage String?
+  rating      Int       @default(5)
+  content     String    @db.Text
+  showHide    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([siteId], map: "Testimonial_siteId_idx")
+  @@index([siteId, sortOrder], map: "Testimonial_siteId_sortOrder_idx")
+}
+
+model twofactor {
+  id        String   @id @default(cuid())
+  userId    String   @unique(map: "TwoFactor_userId_key")
+  secret    String
+  createdAt DateTime @default(now())
+}
+
+model user {
+  id                 String          @id @default(cuid())
+  email              String          @unique(map: "User_email_key")
+  name               String?
+  bio                String?
+  image              String?
+  passwordHash       String
+  legacyPasswordHash String?
+  socialLinks        Json?
+  globalRole         user_globalRole @default(VIEWER)
+  isActive           Boolean         @default(true)
+  twoFAEnabled       Boolean         @default(false)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  deletedAt          DateTime?
+  posts              post[]
+  recipes            recipe[]        @relation("RecipeContributor")
+  savedArticles      savedarticle[]
+  savedRecipes       savedrecipe[]
+  recipeComments     recipecomment[]
+  recipeLikes        recipelike[]
+  recipeRatings      reciperating[]
+  siteUsers          siteuser[]
+  loginHistory       loginhistory[]
+  auditLogs          auditlog[]
+
+  @@index([email], map: "User_email_idx")
+  @@index([isActive], map: "User_isActive_idx")
+}
+
+model visitorlog {
+  id            String   @id @default(cuid())
+  siteId        String
+  visitorId     String
+  pageViewed    String
+  ipAddress     String?
+  location      String?
+  deviceInfo    String?
+  trafficSource String?
+  duration      Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([siteId, createdAt], map: "VisitorLog_siteId_createdAt_idx")
+  @@index([siteId], map: "VisitorLog_siteId_idx")
+}
+
+model webhookevent {
+  id        String   @id @default(cuid())
+  siteId    String
+  type      String
+  payload   Json
+  createdAt DateTime @default(now())
+
+  @@index([siteId], map: "WebhookEvent_siteId_idx")
+  @@index([type], map: "WebhookEvent_type_idx")
+}
+
+model webhooksubscription {
+  id        String    @id @default(cuid())
+  siteId    String
+  name      String
+  url       String
+  events    Json
+  secret    String
+  isActive  Boolean   @default(true)
+  failCount Int       @default(0)
+  lastError String?
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+  userId    String?
+
+  @@index([siteId], map: "WebhookSubscription_siteId_idx")
+  @@index([userId], map: "WebhookSubscription_userId_fkey")
+}
+
+model componentcontent {
+  id           String   @id @default(cuid())
+  siteId       String
+  pageSlug     String
+  componentKey String
+  data         Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([siteId, pageSlug, componentKey], map: "ComponentContent_siteId_pageSlug_componentKey_key")
+  @@index([siteId], map: "ComponentContent_siteId_idx")
+}
+
+enum siteuser_role {
+  ADMIN
+  EDITOR
+  AUTHOR
+  MARKETING
+  VIEWER
+  VISITOR
+}
+
+enum page_status {
+  DRAFT
+  PUBLISHED
+}
+
+enum post_status {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+}
+
+enum service_status {
+  DRAFT
+  ACTIVE
+}
+
+enum user_globalRole {
+  SUPERADMIN
+  ADMIN
+  EDITOR
+  AUTHOR
+  MARKETING
+  VIEWER
+  VISITOR
+}
+
+enum service_visibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum recipe_status {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum page_pageType {
+  CODE_TEMPLATE
+  CMS_BUILT
+  SYSTEM
+}

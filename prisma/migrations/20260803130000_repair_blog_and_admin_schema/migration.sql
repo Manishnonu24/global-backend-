@@ -1,0 +1,214 @@
+-- Forward repair migration for Blog, SEO, Legal, Magazines, and core Admin schema
+-- Safe, additive, non-destructive, idempotent
+
+-- 0. Conflict check: Fail if both PascalCase and lowercase versions exist simultaneously
+SET @conflict := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND BINARY TABLE_NAME = 'Post') + (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND BINARY TABLE_NAME = 'post');
+SET @sql := IF(@conflict = 2, 'SIGNAL SQLSTATE \'45000\' SET MESSAGE_TEXT = \'Conflicting tables Post and post both exist.\'', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- 1. Ensure Join Tables & Secondary Tables Exist
+CREATE TABLE IF NOT EXISTS `_CategoryToPost` (
+    `A` VARCHAR(50) NOT NULL,
+    `B` VARCHAR(50) NOT NULL,
+    UNIQUE INDEX `_CategoryToPost_AB_unique`(`A`, `B`),
+    INDEX `_CategoryToPost_B_index`(`B`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `_PostToTag` (
+    `A` VARCHAR(50) NOT NULL,
+    `B` VARCHAR(50) NOT NULL,
+    UNIQUE INDEX `_PostToTag_AB_unique`(`A`, `B`),
+    INDEX `_PostToTag_B_index`(`B`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `magazines` (
+    `idMagazines` INT NOT NULL AUTO_INCREMENT,
+    `magazine_id` VARCHAR(191) NOT NULL,
+    `magazine_title` VARCHAR(255) NOT NULL,
+    `magazine_slug` VARCHAR(255) NOT NULL,
+    `status` VARCHAR(50) NOT NULL DEFAULT 'DRAFT',
+    `magazine_timestamp` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `publisher_socials` JSON NULL,
+    `inside_issue` JSON NULL,
+    `canonical_url` VARCHAR(255) NULL,
+    `json_ld` JSON NULL,
+    `og_image` VARCHAR(255) NULL,
+    `seo_description` TEXT NULL,
+    `seo_title` VARCHAR(255) NULL,
+    `site_id` VARCHAR(255) NULL,
+    PRIMARY KEY (`idMagazines`),
+    UNIQUE INDEX `magazines_magazine_id_key`(`magazine_id`),
+    UNIQUE INDEX `magazines_magazine_slug_key`(`magazine_slug`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `quiz_types` (
+    `id` VARCHAR(191) NOT NULL,
+    `slug` VARCHAR(191) NOT NULL,
+    `title` VARCHAR(191) NOT NULL,
+    `isActive` BOOLEAN NOT NULL DEFAULT true,
+    `sortOrder` INT NOT NULL DEFAULT 0,
+    `canonicalUrl` VARCHAR(255) NULL,
+    `jsonLd` JSON NULL,
+    `ogImage` VARCHAR(255) NULL,
+    `seoDescription` TEXT NULL,
+    `seoTitle` VARCHAR(255) NULL,
+    `siteId` VARCHAR(255) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE INDEX `quiz_types_slug_key`(`slug`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- 2. Add missing columns to post table
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'post' AND COLUMN_NAME = 'publisherSocials');
+SET @sql := IF(@col = 0, 'ALTER TABLE `post` ADD COLUMN `publisherSocials` JSON NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'post' AND COLUMN_NAME = 'jsonLd');
+SET @sql := IF(@col = 0, 'ALTER TABLE `post` ADD COLUMN `jsonLd` JSON NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'post' AND COLUMN_NAME = 'seoTitle');
+SET @sql := IF(@col = 0, 'ALTER TABLE `post` ADD COLUMN `seoTitle` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'post' AND COLUMN_NAME = 'seoDescription');
+SET @sql := IF(@col = 0, 'ALTER TABLE `post` ADD COLUMN `seoDescription` TEXT NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'post' AND COLUMN_NAME = 'canonicalUrl');
+SET @sql := IF(@col = 0, 'ALTER TABLE `post` ADD COLUMN `canonicalUrl` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'post' AND COLUMN_NAME = 'ogImage');
+SET @sql := IF(@col = 0, 'ALTER TABLE `post` ADD COLUMN `ogImage` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'post' AND COLUMN_NAME = 'deletedAt');
+SET @sql := IF(@col = 0, 'ALTER TABLE `post` ADD COLUMN `deletedAt` DATETIME(3) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'post' AND COLUMN_NAME = 'publishedAt');
+SET @sql := IF(@col = 0, 'ALTER TABLE `post` ADD COLUMN `publishedAt` DATETIME(3) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- 3. Add missing columns to category table
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'category' AND COLUMN_NAME = 'deletedAt');
+SET @sql := IF(@col = 0, 'ALTER TABLE `category` ADD COLUMN `deletedAt` DATETIME(3) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- 4. Add missing columns to magazines table
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'magazines' AND COLUMN_NAME = 'publisher_socials');
+SET @sql := IF(@col = 0, 'ALTER TABLE `magazines` ADD COLUMN `publisher_socials` JSON NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'magazines' AND COLUMN_NAME = 'inside_issue');
+SET @sql := IF(@col = 0, 'ALTER TABLE `magazines` ADD COLUMN `inside_issue` JSON NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'magazines' AND COLUMN_NAME = 'canonical_url');
+SET @sql := IF(@col = 0, 'ALTER TABLE `magazines` ADD COLUMN `canonical_url` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'magazines' AND COLUMN_NAME = 'json_ld');
+SET @sql := IF(@col = 0, 'ALTER TABLE `magazines` ADD COLUMN `json_ld` JSON NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'magazines' AND COLUMN_NAME = 'og_image');
+SET @sql := IF(@col = 0, 'ALTER TABLE `magazines` ADD COLUMN `og_image` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'magazines' AND COLUMN_NAME = 'seo_description');
+SET @sql := IF(@col = 0, 'ALTER TABLE `magazines` ADD COLUMN `seo_description` TEXT NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'magazines' AND COLUMN_NAME = 'seo_title');
+SET @sql := IF(@col = 0, 'ALTER TABLE `magazines` ADD COLUMN `seo_title` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'magazines' AND COLUMN_NAME = 'site_id');
+SET @sql := IF(@col = 0, 'ALTER TABLE `magazines` ADD COLUMN `site_id` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- 5. Add missing columns to legalpage table
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'legalpage' AND COLUMN_NAME = 'canonicalUrl');
+SET @sql := IF(@col = 0, 'ALTER TABLE `legalpage` ADD COLUMN `canonicalUrl` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'legalpage' AND COLUMN_NAME = 'jsonLd');
+SET @sql := IF(@col = 0, 'ALTER TABLE `legalpage` ADD COLUMN `jsonLd` JSON NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'legalpage' AND COLUMN_NAME = 'ogImage');
+SET @sql := IF(@col = 0, 'ALTER TABLE `legalpage` ADD COLUMN `ogImage` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'legalpage' AND COLUMN_NAME = 'seoDescription');
+SET @sql := IF(@col = 0, 'ALTER TABLE `legalpage` ADD COLUMN `seoDescription` TEXT NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'legalpage' AND COLUMN_NAME = 'seoTitle');
+SET @sql := IF(@col = 0, 'ALTER TABLE `legalpage` ADD COLUMN `seoTitle` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'legalpage' AND COLUMN_NAME = 'deletedAt');
+SET @sql := IF(@col = 0, 'ALTER TABLE `legalpage` ADD COLUMN `deletedAt` DATETIME(3) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- 6. Add missing columns to page table
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'page' AND COLUMN_NAME = 'canonicalUrl');
+SET @sql := IF(@col = 0, 'ALTER TABLE `page` ADD COLUMN `canonicalUrl` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'page' AND COLUMN_NAME = 'jsonLd');
+SET @sql := IF(@col = 0, 'ALTER TABLE `page` ADD COLUMN `jsonLd` JSON NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'page' AND COLUMN_NAME = 'ogImage');
+SET @sql := IF(@col = 0, 'ALTER TABLE `page` ADD COLUMN `ogImage` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'page' AND COLUMN_NAME = 'seoDescription');
+SET @sql := IF(@col = 0, 'ALTER TABLE `page` ADD COLUMN `seoDescription` TEXT NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'page' AND COLUMN_NAME = 'seoTitle');
+SET @sql := IF(@col = 0, 'ALTER TABLE `page` ADD COLUMN `seoTitle` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'page' AND COLUMN_NAME = 'templateKey');
+SET @sql := IF(@col = 0, 'ALTER TABLE `page` ADD COLUMN `templateKey` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'page' AND COLUMN_NAME = 'templateVersion');
+SET @sql := IF(@col = 0, 'ALTER TABLE `page` ADD COLUMN `templateVersion` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'page' AND COLUMN_NAME = 'deletedAt');
+SET @sql := IF(@col = 0, 'ALTER TABLE `page` ADD COLUMN `deletedAt` DATETIME(3) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- 7. Add missing columns to quiz_types table
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'quiz_types' AND COLUMN_NAME = 'canonicalUrl');
+SET @sql := IF(@col = 0, 'ALTER TABLE `quiz_types` ADD COLUMN `canonicalUrl` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'quiz_types' AND COLUMN_NAME = 'jsonLd');
+SET @sql := IF(@col = 0, 'ALTER TABLE `quiz_types` ADD COLUMN `jsonLd` JSON NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'quiz_types' AND COLUMN_NAME = 'ogImage');
+SET @sql := IF(@col = 0, 'ALTER TABLE `quiz_types` ADD COLUMN `ogImage` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'quiz_types' AND COLUMN_NAME = 'seoDescription');
+SET @sql := IF(@col = 0, 'ALTER TABLE `quiz_types` ADD COLUMN `seoDescription` TEXT NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'quiz_types' AND COLUMN_NAME = 'seoTitle');
+SET @sql := IF(@col = 0, 'ALTER TABLE `quiz_types` ADD COLUMN `seoTitle` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'quiz_types' AND COLUMN_NAME = 'siteId');
+SET @sql := IF(@col = 0, 'ALTER TABLE `quiz_types` ADD COLUMN `siteId` VARCHAR(255) NULL', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;

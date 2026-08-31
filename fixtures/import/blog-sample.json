@@ -1,0 +1,20 @@
+[
+  {
+    "title": "Mindful Eating in Ayurveda",
+    "slug": "mindful-eating-in-ayurveda",
+    "content": "<p>Eating slowly and attentively aids digestion...</p>",
+    "excerpt": "Tips for mindful eating",
+    "status": "PUBLISHED",
+    "category": "Ayurveda",
+    "tags": "digestion,mindfulness"
+  },
+  {
+    "title": "Understanding Tridosha",
+    "slug": "understanding-tridosha",
+    "content": "<p>Vata, Pitta, and Kapha form the core of Ayurveda...</p>",
+    "excerpt": "Overview of Vata Pitta Kapha",
+    "status": "PUBLISHED",
+    "category": "Ayurveda",
+    "tags": "dosha,foundations"
+  }
+]

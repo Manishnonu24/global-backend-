@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0"
+  xmlns:content="http://purl.org/rss/1.0/modules/content/"
+  xmlns:dc="http://purl.org/dc/elements/1.1/"
+  xmlns:wp="http://wordpress.org/export/1.2/"
+>
+<channel>
+  <title>A Health Place</title>
+  <item>
+    <title>Spring Detox Principles</title>
+    <wp:post_name>spring-detox-principles</wp:post_name>
+    <content:encoded><![CDATA[<p>Spring is the ideal season to cleanse excess Kapha...</p>]]></content:encoded>
+    <excerpt:encoded><![CDATA[Seasonal detox guide]]></excerpt:encoded>
+    <wp:status>publish</wp:status>
+    <wp:post_type>post</wp:post_type>
+    <dc:creator><![CDATA[admin]]></dc:creator>
+    <category domain="category" nicename="detox"><![CDATA[Detox]]></category>
+    <category domain="post_tag" nicename="spring"><![CDATA[Spring]]></category>
+  </item>
+</channel>
+</rss>
