@@ -31,6 +31,8 @@ model QuizType {
   seoTitle         String?  @db.VarChar(255)
   siteId           String?
 
+  @@index([siteId], map: "QuizType_siteId_idx")
+  @@index([siteId, isActive, sortOrder], map: "QuizType_siteId_isActive_sortOrder_idx")
   @@map("quiz_types")
 }
 
@@ -42,6 +44,7 @@ model Quiz {
   correctAnswer String  @db.Text
   explanation   String  @db.Text
 
+  @@index([category], map: "Quiz_category_idx")
   @@map("quizzes")
 }
 
@@ -50,6 +53,7 @@ model IpQuizAnalytic {
   user_ip String
   played  Int    @default(0)
 
+  @@index([user_ip], map: "IpQuizAnalytic_user_ip_idx")
   @@map("ip_quiz_analytic")
 }
 
@@ -61,6 +65,9 @@ model QuizAnalytics {
   choose_option String @db.VarChar(255)
   time_taken    String @db.VarChar(255)
 
+  @@index([userId], map: "QuizAnalytics_userId_idx")
+  @@index([quizId], map: "QuizAnalytics_quizId_idx")
+  @@index([userId, quizId], map: "QuizAnalytics_userId_quizId_idx")
   @@map("quiz_analytics")
 }
 
@@ -112,6 +119,8 @@ model Auth {
   otp          String?
   otpCreatedAt DateTime?
 
+  @@index([role], map: "Auth_role_idx")
+  @@index([date], map: "Auth_date_idx")
   @@map("auth")
 }
 
@@ -146,6 +155,7 @@ model LegacyAdEvent {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([adId, eventType])
+  @@index([createdAt], map: "LegacyAdEvent_createdAt_idx")
   @@map("ad_events")
 }
 
@@ -168,6 +178,8 @@ model CommunityEvent {
   updatedAt     DateTime @updatedAt
 
   @@index([siteId, isFeatured])
+  @@index([siteId, status], map: "CommunityEvent_siteId_status_idx")
+  @@index([siteId, status, isFeatured], map: "CommunityEvent_siteId_status_isFeatured_idx")
   @@map("community_events")
 }
 
@@ -390,6 +402,8 @@ model cookieconsentlog {
   createdAt DateTime @default(now())
 
   @@index([siteId], map: "CookieConsentLog_siteId_idx")
+  @@index([visitorId], map: "CookieConsentLog_visitorId_idx")
+  @@index([siteId, createdAt], map: "CookieConsentLog_siteId_createdAt_idx")
 }
 
 model emailcampaign {
@@ -565,6 +579,7 @@ model integrationmanifest {
 
   @@index([createdAt], map: "IntegrationManifest_createdAt_idx")
   @@index([siteId], map: "IntegrationManifest_siteId_idx")
+  @@index([siteId, createdAt], map: "IntegrationManifest_siteId_createdAt_idx")
 }
 
 model ipblock {
@@ -684,6 +699,9 @@ model newsletter {
   createdAt DateTime @default(now())
 
   @@index([siteId], map: "Newsletter_siteId_idx")
+  @@index([email], map: "Newsletter_email_idx")
+  @@index([siteId, status], map: "Newsletter_siteId_status_idx")
+  @@index([siteId, createdAt], map: "Newsletter_siteId_createdAt_idx")
 }
 
 model notificationalert {
@@ -749,6 +767,7 @@ model passwordreset {
 
   @@index([expiresAt], map: "PasswordReset_expiresAt_idx")
   @@index([userId], map: "PasswordReset_userId_idx")
+  @@index([used, expiresAt], map: "PasswordReset_used_expiresAt_idx")
 }
 
 model post {
@@ -829,6 +848,7 @@ model recentlyviewed {
 
   @@unique([userId, contentType, contentId], map: "RecentlyViewed_userId_contentType_contentId_key")
   @@index([userId, viewedAt], map: "RecentlyViewed_userId_viewedAt_idx")
+  @@index([contentType, contentId], map: "RecentlyViewed_contentType_contentId_idx")
 }
 
 model recipe {
@@ -1119,6 +1139,7 @@ model systemerrorlog {
 
   @@index([createdAt], map: "SystemErrorLog_createdAt_idx")
   @@index([siteId], map: "SystemErrorLog_siteId_idx")
+  @@index([siteId, createdAt], map: "SystemErrorLog_siteId_createdAt_idx")
 }
 
 model tag {
@@ -1175,6 +1196,8 @@ model twofactor {
   userId    String   @unique(map: "TwoFactor_userId_key")
   secret    String
   createdAt DateTime @default(now())
+
+  @@index([createdAt], map: "TwoFactor_createdAt_idx")
 }
 
 model user {
@@ -1249,6 +1272,7 @@ model webhooksubscription {
   userId    String?
 
   @@index([siteId], map: "WebhookSubscription_siteId_idx")
+  @@index([siteId, isActive], map: "WebhookSubscription_siteId_isActive_idx")
   @@index([userId], map: "WebhookSubscription_userId_fkey")
 }
 
