@@ -51,46 +51,49 @@ export async function GET(req) {
       }, {});
     }
 
-    const sectionsWithUrls = await Promise.all(
-      visibleSections.map(async (s) => {
-        const content = { ...(s.content || {}) };
-        if (content.bannerMediaId && mediaMap[content.bannerMediaId]) {
-          content.bannerUrl = mediaMap[content.bannerMediaId];
-        }
-        if (content.imageMediaId && mediaMap[content.imageMediaId]) {
-          content.imageUrl = mediaMap[content.imageMediaId];
-        }
+    // ── Batched pre-fetch: detect which section types are present, then fire
+    // all required DB queries concurrently in a single Promise.all so the
+    // subsequent .map() can be fully synchronous (fixes N+1 queries).
+    const sectionTypes = new Set(
+      visibleSections.map((s) => String(s.type || "").toUpperCase()),
+    );
 
-        // Dynamically fetch items for component-specific lists
-        const type = String(s.type || "").toUpperCase();
-        if (type === "SERVICES") {
-          const services = await prisma.service.findMany({
+    // For BLOGS we honour the `maxItems` of the first BLOGS section (or 6).
+    const blogsSection = visibleSections.find(
+      (s) => String(s.type || "").toUpperCase() === "BLOGS",
+    );
+    const blogsTake = (blogsSection?.content?.maxItems) || 6;
+
+    const [
+      prefetchedServices,
+      prefetchedTeam,
+      prefetchedTestimonials,
+      prefetchedFaqs,
+      prefetchedPosts,
+    ] = await Promise.all([
+      sectionTypes.has("SERVICES")
+        ? prisma.service.findMany({
             where: { siteId, status: "ACTIVE", deletedAt: null },
             orderBy: { sortOrder: "asc" },
-          });
-          content.items = services.map((s) => {
-            if (s.price) {
-              const trimmed = String(s.price).trim();
-              const isNumeric = !isNaN(trimmed) && !isNaN(parseFloat(trimmed));
-              const hasCurrencySymbol = /[\$\€\£\¥\₹]/.test(trimmed);
-              if (isNumeric && !hasCurrencySymbol) {
-                return { ...s, price: `$${trimmed}` };
-              }
-            }
-            return s;
-          });
-        } else if (type === "TEAM") {
-          content.items = await prisma.teammember.findMany({
+          })
+        : Promise.resolve(null),
+
+      sectionTypes.has("TEAM")
+        ? prisma.teammember.findMany({
             where: { siteId, deletedAt: null },
             orderBy: { sortOrder: "asc" },
-          });
-        } else if (type === "TESTIMONIALS") {
-          content.items = await prisma.testimonial.findMany({
+          })
+        : Promise.resolve(null),
+
+      sectionTypes.has("TESTIMONIALS")
+        ? prisma.testimonial.findMany({
             where: { siteId, showHide: true, deletedAt: null },
             orderBy: { sortOrder: "asc" },
-          });
-        } else if (type === "FAQ") {
-          content.items = await prisma.faq.findMany({
+          })
+        : Promise.resolve(null),
+
+      sectionTypes.has("FAQ")
+        ? prisma.faq.findMany({
             where: {
               siteId,
               showHide: true,
@@ -98,9 +101,11 @@ export async function GET(req) {
               OR: [{ pageId: null }, { pageId: page.id }],
             },
             orderBy: { sortOrder: "asc" },
-          });
-        } else if (type === "BLOGS") {
-          const postsRes = await prisma.post.findMany({
+          })
+        : Promise.resolve(null),
+
+      sectionTypes.has("BLOGS")
+        ? prisma.post.findMany({
             where: {
               siteId,
               status: "PUBLISHED",
@@ -108,7 +113,7 @@ export async function GET(req) {
               publishedAt: { lte: new Date() },
             },
             orderBy: { publishedAt: "desc" },
-            take: content.maxItems || 6,
+            take: blogsTake,
             include: {
               author: { select: { id: true, email: true } },
               categories: { select: { id: true, name: true, slug: true } },
@@ -116,13 +121,45 @@ export async function GET(req) {
                 select: { id: true, url: true, secureUrl: true, altText: true },
               },
             },
-          });
-          content.items = postsRes;
-        }
+          })
+        : Promise.resolve(null),
+    ]);
 
-        return { ...s, content };
-      }),
-    );
+    // ── Synchronous map: assign pre-fetched data — no DB calls inside.
+    const sectionsWithUrls = visibleSections.map((s) => {
+      const content = { ...(s.content || {}) };
+      if (content.bannerMediaId && mediaMap[content.bannerMediaId]) {
+        content.bannerUrl = mediaMap[content.bannerMediaId];
+      }
+      if (content.imageMediaId && mediaMap[content.imageMediaId]) {
+        content.imageUrl = mediaMap[content.imageMediaId];
+      }
+
+      const type = String(s.type || "").toUpperCase();
+      if (type === "SERVICES" && prefetchedServices !== null) {
+        content.items = prefetchedServices.map((svc) => {
+          if (svc.price) {
+            const trimmed = String(svc.price).trim();
+            const isNumeric = !isNaN(trimmed) && !isNaN(parseFloat(trimmed));
+            const hasCurrencySymbol = /[\$\€\£\¥\₹]/.test(trimmed);
+            if (isNumeric && !hasCurrencySymbol) {
+              return { ...svc, price: `$${trimmed}` };
+            }
+          }
+          return svc;
+        });
+      } else if (type === "TEAM" && prefetchedTeam !== null) {
+        content.items = prefetchedTeam;
+      } else if (type === "TESTIMONIALS" && prefetchedTestimonials !== null) {
+        content.items = prefetchedTestimonials;
+      } else if (type === "FAQ" && prefetchedFaqs !== null) {
+        content.items = prefetchedFaqs;
+      } else if (type === "BLOGS" && prefetchedPosts !== null) {
+        content.items = prefetchedPosts;
+      }
+
+      return { ...s, content };
+    });
 
     const seo = {
       title: page.seoTitle || page.title,
