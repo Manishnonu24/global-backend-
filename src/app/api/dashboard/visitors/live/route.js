@@ -11,10 +11,8 @@ export async function GET(req) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
-    const [liveVisitors, liveCount] = await Promise.all([
-      analyticsService.getLiveVisitors(auth.siteId),
-      analyticsService.getLiveVisitorsCount(auth.siteId),
-    ]);
+    const liveVisitors = await analyticsService.getLiveVisitors(auth.siteId);
+    const liveCount = liveVisitors.length;
 
     return NextResponse.json(apiSuccess({ liveCount, liveVisitors }));
   } catch (err) {

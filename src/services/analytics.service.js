@@ -76,21 +76,13 @@ export class AnalyticsService {
 
   async getLiveVisitors(siteId) {
     const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
-    // Get the most recent log entry per visitor that's been active in last 2 min
-    const recent = await prisma.visitorLog.findMany({
+    // groupBy deduplicates at the DB level — one row per visitorId — so we
+    // never load thousands of raw rows into JS just to call Set.has().
+    return prisma.visitorLog.groupBy({
+      by: ["visitorId", "pageViewed", "deviceInfo", "location"],
       where: { siteId, createdAt: { gte: twoMinutesAgo } },
-      orderBy: { createdAt: "desc" },
+      _max: { createdAt: true },
     });
-    // Deduplicate by visitorId – keep most recent entry
-    const seen = new Set();
-    const live = [];
-    for (const log of recent) {
-      if (!seen.has(log.visitorId)) {
-        seen.add(log.visitorId);
-        live.push(log);
-      }
-    }
-    return live;
   }
 
   // ─── Aggregated Stats ─────────────────────────────────────────────────────────

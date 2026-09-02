@@ -10,16 +10,16 @@ datasource db {
 
 model QuizType {
   id               Int      @id @default(autoincrement())
-  slug             String   @unique
+  slug             String   @unique @db.VarChar(191)
   title            String   @db.VarChar(200)
   subtitle         String?  @db.VarChar(300)
   description      String   @db.Text
-  category         String
+  category         String   @db.VarChar(100)
   categoryColor    String   @default("#0f7c85") @db.VarChar(20)
   imageUrl         String?  @db.VarChar(500)
   icon             String?  @db.VarChar(10)
   estimatedMinutes Int      @default(5)
-  difficulty       String   @default("Beginner")
+  difficulty       String   @default("Beginner") @db.VarChar(50)
   isActive         Boolean  @default(true)
   sortOrder        Int      @default(0)
   createdAt        DateTime @default(now())
@@ -29,44 +29,51 @@ model QuizType {
   ogImage          String?  @db.VarChar(255)
   seoDescription   String?  @db.Text
   seoTitle         String?  @db.VarChar(255)
-  siteId           String?
+  siteId           String?  @db.VarChar(100)
 
+  @@index([siteId], map: "QuizType_siteId_idx")
+  @@index([siteId, isActive, sortOrder], map: "QuizType_siteId_isActive_sortOrder_idx")
   @@map("quiz_types")
 }
 
 model Quiz {
   id            Int     @id @default(autoincrement()) @map("_id")
-  category      String? @default("general-wellness")
+  category      String? @default("general-wellness") @db.VarChar(100)
   question      String  @db.Text
   options       String  @db.Text
   correctAnswer String  @db.Text
   explanation   String  @db.Text
 
+  @@index([category], map: "Quiz_category_idx")
   @@map("quizzes")
 }
 
 model IpQuizAnalytic {
   id      Int    @id @default(autoincrement())
-  user_ip String
+  user_ip String @db.VarChar(45)
   played  Int    @default(0)
 
+  @@index([user_ip], map: "IpQuizAnalytic_user_ip_idx")
   @@map("ip_quiz_analytic")
 }
 
 model QuizAnalytics {
   id            Int    @id @default(autoincrement())
-  userId        String @db.VarChar(255)
+  userId        String @db.VarChar(100)
   quizId        Int
   correct       Int
-  choose_option String @db.VarChar(255)
-  time_taken    String @db.VarChar(255)
+  choose_option String @db.VarChar(100)
+  time_taken    String @db.VarChar(50)
 
+  @@index([userId], map: "QuizAnalytics_userId_idx")
+  @@index([quizId], map: "QuizAnalytics_quizId_idx")
+  @@index([userId, quizId], map: "QuizAnalytics_userId_quizId_idx")
   @@map("quiz_analytics")
 }
 
 model Magazine {
   id               Int       @id @default(autoincrement()) @map("idMagazines")
-  magazineId       String    @map("magazine_id") @db.VarChar(255)
+  magazineId       String    @map("magazine_id") @db.VarChar(191)
   title            String    @map("magazine_title") @db.VarChar(255)
   description      String    @map("magazine_description") @db.Text
   introduction     String?   @map("magazine_introduction") @db.Text
@@ -78,7 +85,7 @@ model Magazine {
   date             DateTime  @map("magazine_date") @db.Date
   category         String    @map("magazine_category") @db.VarChar(255)
   magCloudLink     String    @map("MagCloudLink") @db.VarChar(255)
-  slug             String    @unique @map("magazine_slug")
+  slug             String    @unique @map("magazine_slug") @db.VarChar(191)
   status           Int       @default(1)
   timestamp        DateTime  @default(now()) @map("magazine_timestamp")
   publisherSocials Json?     @map("publisher_socials")
@@ -88,7 +95,7 @@ model Magazine {
   ogImage          String?   @map("og_image") @db.VarChar(255)
   seoDescription   String?   @map("seo_description") @db.Text
   seoTitle         String?   @map("seo_title") @db.VarChar(255)
-  siteId           String?   @map("site_id")
+  siteId           String?   @map("site_id") @db.VarChar(100)
   comments         comment[]
 
   @@index([siteId, status, date], map: "Magazine_siteId_status_date_idx")
@@ -101,17 +108,19 @@ model Magazine {
 model Auth {
   id           Int       @id @default(autoincrement()) @map("idauth")
   name         String?   @db.VarChar(255)
-  username     String?   @unique
-  email        String?   @unique
+  username     String?   @unique @db.VarChar(191)
+  email        String?   @unique @db.VarChar(191)
   password     String?   @db.VarChar(255)
-  role         String?   @default("user")
+  role         String?   @default("user") @db.VarChar(50)
   profile      String?   @db.VarChar(255)
   profession   String?   @db.VarChar(255)
   bio          String?   @db.Text
   date         DateTime  @default(now())
-  otp          String?
+  otp          String?   @db.VarChar(50)
   otpCreatedAt DateTime?
 
+  @@index([role], map: "Auth_role_idx")
+  @@index([date], map: "Auth_date_idx")
   @@map("auth")
 }
 
@@ -146,13 +155,14 @@ model LegacyAdEvent {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([adId, eventType])
+  @@index([createdAt], map: "LegacyAdEvent_createdAt_idx")
   @@map("ad_events")
 }
 
 model CommunityEvent {
-  id            String   @id @default(cuid())
-  siteId        String
-  title         String
+  id            String   @id @default(cuid()) @db.VarChar(50)
+  siteId        String   @db.VarChar(100)
+  title         String   @db.VarChar(255)
   category      String   @default("MINDFULNESS WALK")
   description   String   @db.Text
   imageUrl      String?
@@ -163,26 +173,28 @@ model CommunityEvent {
   reservedSeats Int      @default(45)
   totalSeats    Int      @default(60)
   isFeatured    Boolean  @default(true)
-  status        String   @default("active")
+  status        String   @default("active") @db.VarChar(50)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@index([siteId, isFeatured])
+  @@index([siteId, status], map: "CommunityEvent_siteId_status_idx")
+  @@index([siteId, status, isFeatured], map: "CommunityEvent_siteId_status_isFeatured_idx")
   @@map("community_events")
 }
 
 model ad {
-  id           String       @id @default(cuid())
-  zoneId       String
-  advertiserId String?
-  campaignId   String?
-  name         String
-  type         String
+  id           String       @id @default(cuid()) @db.VarChar(50)
+  zoneId       String       @db.VarChar(50)
+  advertiserId String?      @db.VarChar(50)
+  campaignId   String?      @db.VarChar(50)
+  name         String       @db.VarChar(191)
+  type         String       @db.VarChar(50)
   code         String?      @db.Text
-  imageUrl     String?
-  targetUrl    String?
+  imageUrl     String?      @db.VarChar(500)
+  targetUrl    String?      @db.VarChar(500)
   isActive     Boolean      @default(true)
-  status       String       @default("draft")
+  status       String       @default("draft") @db.VarChar(20)
   startDate    DateTime?
   endDate      DateTime?
   priority     Int          @default(50)
@@ -192,9 +204,9 @@ model ad {
   clicks       Int          @default(0)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
-  ctaText      String?
+  ctaText      String?      @db.VarChar(100)
   description  String?      @db.Text
-  headline     String?
+  headline     String?      @db.VarChar(255)
   maxClicks    Int?
   ctaColor     String?      @db.VarChar(20)
   zone         adzone       @relation(fields: [zoneId], references: [id])
@@ -208,12 +220,12 @@ model ad {
 }
 
 model adanalytic {
-  id        String   @id @default(cuid())
-  adId      String
-  type      String
-  visitorId String?
-  ipAddress String?
-  userAgent String?
+  id        String   @id @default(cuid()) @db.VarChar(50)
+  adId      String   @db.VarChar(50)
+  type      String   @db.VarChar(50)
+  visitorId String?  @db.VarChar(100)
+  ipAddress String?  @db.VarChar(45)
+  userAgent String?  @db.Text
   createdAt DateTime @default(now())
   ad        ad       @relation(fields: [adId], references: [id], onDelete: Cascade)
 
@@ -221,14 +233,14 @@ model adanalytic {
 }
 
 model adcampaign {
-  id          String    @id @default(cuid())
-  siteId      String
-  name        String
+  id          String    @id @default(cuid()) @db.VarChar(50)
+  siteId      String    @db.VarChar(100)
+  name        String    @db.VarChar(191)
   description String?   @db.Text
   budget      Float?
   startDate   DateTime?
   endDate     DateTime?
-  status      String    @default("active")
+  status      String    @default("active") @db.VarChar(20)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   ads         ad[]
@@ -237,15 +249,15 @@ model adcampaign {
 }
 
 model advertiser {
-  id          String   @id @default(cuid())
-  siteId      String
-  companyName String
-  contactName String?
-  email       String?
-  phone       String?
-  website     String?
-  logo        String?
-  status      String   @default("active")
+  id          String   @id @default(cuid()) @db.VarChar(50)
+  siteId      String   @db.VarChar(100)
+  companyName String   @db.VarChar(191)
+  contactName String?  @db.VarChar(191)
+  email       String?  @db.VarChar(191)
+  phone       String?  @db.VarChar(50)
+  website     String?  @db.VarChar(255)
+  logo        String?  @db.VarChar(500)
+  status      String   @default("active") @db.VarChar(20)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   ads         ad[]
@@ -254,9 +266,9 @@ model advertiser {
 }
 
 model adzone {
-  id        String   @id @default(cuid())
+  id        String   @id @default(cuid()) @db.VarChar(50)
   siteId    String   @db.VarChar(100)
-  name      String
+  name      String   @db.VarChar(191)
   slug      String   @db.VarChar(100)
   width     Int?
   height    Int?
@@ -269,10 +281,10 @@ model adzone {
 }
 
 model apikey {
-  id        String    @id @default(cuid())
-  siteId    String
-  name      String
-  key       String    @unique(map: "ApiKey_key_key")
+  id        String    @id @default(cuid()) @db.VarChar(50)
+  siteId    String    @db.VarChar(100)
+  name      String    @db.VarChar(191)
+  key       String    @unique(map: "ApiKey_key_key") @db.VarChar(191)
   isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -282,10 +294,10 @@ model apikey {
 }
 
 model auditlog {
-  id        String   @id @default(cuid())
-  siteId    String?
-  userId    String?
-  action    String
+  id        String   @id @default(cuid()) @db.VarChar(50)
+  siteId    String?  @db.VarChar(100)
+  userId    String?  @db.VarChar(50)
+  action    String   @db.VarChar(100)
   meta      Json?
   createdAt DateTime @default(now())
   user      user?    @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -296,10 +308,10 @@ model auditlog {
 }
 
 model campaignlog {
-  id           String        @id @default(cuid())
-  campaignId   String        @db.VarChar(100)
-  subscriberId String        @db.VarChar(100)
-  status       String        @default("pending")
+  id           String        @id @default(cuid()) @db.VarChar(50)
+  campaignId   String        @db.VarChar(50)
+  subscriberId String        @db.VarChar(50)
+  status       String        @default("pending") @db.VarChar(20)
   errorMessage String?       @db.Text
   sentAt       DateTime?
   openedAt     DateTime?
@@ -328,14 +340,14 @@ model category {
 }
 
 model comment {
-  id          String    @id @default(cuid())
-  siteId      String
+  id          String    @id @default(cuid()) @db.VarChar(50)
+  siteId      String    @db.VarChar(100)
   postId      String?   @db.VarChar(50)
   magazineId  Int?
-  authorName  String
-  authorEmail String
+  authorName  String    @db.VarChar(191)
+  authorEmail String    @db.VarChar(191)
   content     String    @db.Text
-  status      String    @default("pending")
+  status      String    @default("pending") @db.VarChar(20)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   post        post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
@@ -348,11 +360,11 @@ model comment {
 }
 
 model contactformsubmission {
-  id        String    @id @default(cuid())
-  siteId    String
-  name      String
-  email     String
-  phone     String?
+  id        String    @id @default(cuid()) @db.VarChar(50)
+  siteId    String    @db.VarChar(100)
+  name      String    @db.VarChar(191)
+  email     String    @db.VarChar(191)
+  phone     String?   @db.VarChar(50)
   message   String    @db.Text
   status    String    @default("new") @db.VarChar(20)
   notes     String?   @db.Text
@@ -381,8 +393,8 @@ model contentversion {
 
 model cookieconsentlog {
   id        String   @id @default(cuid())
-  siteId    String
-  visitorId String
+  siteId    String   @db.VarChar(100)
+  visitorId String   @db.VarChar(100)
   accepted  Boolean  @default(false)
   analytics Boolean  @default(false)
   marketing Boolean  @default(false)
@@ -390,16 +402,18 @@ model cookieconsentlog {
   createdAt DateTime @default(now())
 
   @@index([siteId], map: "CookieConsentLog_siteId_idx")
+  @@index([visitorId], map: "CookieConsentLog_visitorId_idx")
+  @@index([siteId, createdAt], map: "CookieConsentLog_siteId_createdAt_idx")
 }
 
 model emailcampaign {
-  id                String             @id @default(cuid())
-  siteId            String
-  name              String
-  subject           String
+  id                String             @id @default(cuid()) @db.VarChar(50)
+  siteId            String             @db.VarChar(100)
+  name              String             @db.VarChar(191)
+  subject           String             @db.VarChar(255)
   body              String             @db.LongText
-  listId            String?
-  status            String             @default("draft")
+  listId            String?            @db.VarChar(50)
+  status            String             @default("draft") @db.VarChar(20)
   scheduledAt       DateTime?
   sentAt            DateTime?
   createdAt         DateTime           @default(now())
@@ -441,11 +455,11 @@ model emaillog {
 }
 
 model emailtemplate {
-  id          String   @id @default(cuid())
-  siteId      String
-  name        String
-  triggerKey  String?
-  subject     String?
+  id          String   @id @default(cuid()) @db.VarChar(50)
+  siteId      String   @db.VarChar(100)
+  name        String   @db.VarChar(191)
+  triggerKey  String?  @db.VarChar(100)
+  subject     String?  @db.VarChar(255)
   htmlContent String   @db.LongText
   designJson  String?  @db.LongText
   isActive    Boolean  @default(true)
@@ -457,11 +471,11 @@ model emailtemplate {
 }
 
 model faq {
-  id           String    @id @default(cuid())
-  siteId       String
-  question     String
+  id           String    @id @default(cuid()) @db.VarChar(50)
+  siteId       String    @db.VarChar(100)
+  question     String    @db.VarChar(255)
   answer       String    @db.Text
-  pageId       String?
+  pageId       String?   @db.VarChar(50)
   sortOrder    Int       @default(0)
   showHide     Boolean   @default(true)
   schemaMarkup Boolean   @default(false)
@@ -476,17 +490,17 @@ model faq {
 }
 
 model frontendproject {
-  id               String    @id @default(cuid())
-  siteId           String
-  name             String
-  framework        String
-  apiKey           String    @unique(map: "FrontendProject_apiKey_key")
+  id               String    @id @default(cuid()) @db.VarChar(50)
+  siteId           String    @db.VarChar(100)
+  name             String    @db.VarChar(191)
+  framework        String    @db.VarChar(50)
+  apiKey           String    @unique(map: "FrontendProject_apiKey_key") @db.VarChar(191)
   isActive         Boolean   @default(true)
   lastSyncAt       DateTime?
-  baseUrl          String?
-  sdkVersion       String?
-  syncStatus       String?
-  lastManifestHash String?
+  baseUrl          String?   @db.VarChar(255)
+  sdkVersion       String?   @db.VarChar(50)
+  syncStatus       String?   @db.VarChar(50)
+  lastManifestHash String?   @db.VarChar(100)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -495,8 +509,8 @@ model frontendproject {
 }
 
 model globalsettings {
-  id                String    @id @default(cuid())
-  siteId            String    @unique(map: "GlobalSettings_siteId_key")
+  id                String    @id @default(cuid()) @db.VarChar(50)
+  siteId            String    @unique(map: "GlobalSettings_siteId_key") @db.VarChar(100)
   header            Json?
   footer            Json?
   analytics         Json?
@@ -521,8 +535,8 @@ model globalsettings {
 }
 
 model importbatch {
-  id           String         @id @default(cuid())
-  siteId       String
+  id           String         @id @default(cuid()) @db.VarChar(50)
+  siteId       String         @db.VarChar(100)
   sourceType   String         @db.VarChar(20)
   targetModel  String         @db.VarChar(50)
   fileName     String         @db.VarChar(255)
@@ -531,7 +545,7 @@ model importbatch {
   successRows  Int            @default(0)
   failedRows   Int            @default(0)
   errorLog     Json?
-  createdBy    String?
+  createdBy    String?        @db.VarChar(50)
   createdAt    DateTime       @default(now())
   completedAt  DateTime?
   rolledBackAt DateTime?
@@ -542,8 +556,8 @@ model importbatch {
 }
 
 model importrecord {
-  id           String      @id @default(cuid())
-  batchId      String
+  id           String      @id @default(cuid()) @db.VarChar(50)
+  batchId      String      @db.VarChar(50)
   targetModel  String      @db.VarChar(50)
   recordId     String      @db.VarChar(100)
   action       String      @db.VarChar(20)
@@ -556,19 +570,20 @@ model importrecord {
 }
 
 model integrationmanifest {
-  id           String   @id @default(cuid())
-  siteId       String
-  source       String?
-  manifestHash String?
+  id           String   @id @default(cuid()) @db.VarChar(50)
+  siteId       String   @db.VarChar(100)
+  source       String?  @db.VarChar(100)
+  manifestHash String?  @db.VarChar(100)
   rawJson      Json
   createdAt    DateTime @default(now())
 
   @@index([createdAt], map: "IntegrationManifest_createdAt_idx")
   @@index([siteId], map: "IntegrationManifest_siteId_idx")
+  @@index([siteId, createdAt], map: "IntegrationManifest_siteId_createdAt_idx")
 }
 
 model ipblock {
-  id        String   @id @default(cuid())
+  id        String   @id @default(cuid()) @db.VarChar(50)
   siteId    String   @db.VarChar(100)
   ipAddress String   @db.VarChar(45)
   reason    String?
@@ -579,13 +594,13 @@ model ipblock {
 }
 
 model lead {
-  id              String    @id @default(cuid())
-  siteId          String
-  name            String
-  email           String
-  phone           String?
-  serviceInterest String?
-  sourcePage      String?
+  id              String    @id @default(cuid()) @db.VarChar(50)
+  siteId          String    @db.VarChar(100)
+  name            String    @db.VarChar(191)
+  email           String    @db.VarChar(191)
+  phone           String?   @db.VarChar(50)
+  serviceInterest String?   @db.VarChar(100)
+  sourcePage      String?   @db.VarChar(255)
   status          String    @default("new") @db.VarChar(20)
   notes           String?   @db.Text
   createdAt       DateTime  @default(now())
@@ -597,10 +612,10 @@ model lead {
 }
 
 model legalpage {
-  id             String    @id @default(cuid())
+  id             String    @id @default(cuid()) @db.VarChar(50)
   siteId         String    @db.VarChar(100)
   type           String    @db.VarChar(100)
-  title          String
+  title          String    @db.VarChar(255)
   content        String    @db.LongText
   contentJson    String?   @db.LongText
   published      Boolean   @default(false)
@@ -608,11 +623,11 @@ model legalpage {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
-  canonicalUrl   String?
+  canonicalUrl   String?   @db.VarChar(255)
   jsonLd         Json?
-  ogImage        String?
+  ogImage        String?   @db.VarChar(255)
   seoDescription String?   @db.Text
-  seoTitle       String?
+  seoTitle       String?   @db.VarChar(255)
 
   @@unique([siteId, type], map: "LegalPage_siteId_type_key")
   @@index([siteId], map: "LegalPage_siteId_idx")
@@ -620,10 +635,10 @@ model legalpage {
 }
 
 model loginhistory {
-  id        String   @id @default(cuid())
-  userId    String
-  ipAddress String?
-  userAgent String?
+  id        String   @id @default(cuid()) @db.VarChar(50)
+  userId    String   @db.VarChar(50)
+  ipAddress String?  @db.VarChar(45)
+  userAgent String?  @db.Text
   success   Boolean  @default(true)
   createdAt DateTime @default(now())
   user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -633,26 +648,26 @@ model loginhistory {
 }
 
 model media {
-  id               String       @id @default(cuid())
-  siteId           String
-  fileName         String
-  originalName     String?
-  publicId         String
-  url              String
-  secureUrl        String?
-  mimeType         String?
-  extension        String?
+  id               String       @id @default(cuid()) @db.VarChar(50)
+  siteId           String       @db.VarChar(100)
+  fileName         String       @db.VarChar(255)
+  originalName     String?      @db.VarChar(255)
+  publicId         String       @db.VarChar(255)
+  url              String       @db.Text
+  secureUrl        String?      @db.Text
+  mimeType         String?      @db.VarChar(100)
+  extension        String?      @db.VarChar(20)
   size             Int?
   width            Int?
   height           Int?
-  altText          String?
+  altText          String?      @db.Text
   isImage          Boolean      @default(false)
   isVideo          Boolean      @default(false)
   isDocument       Boolean      @default(false)
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
   deletedAt        DateTime?
-  folderId         String?
+  folderId         String?      @db.VarChar(50)
   folder           mediafolder? @relation("MediaInFolder", fields: [folderId], references: [id], onDelete: SetNull)
   featuredPosts    post[]       @relation("PostFeaturedImage")
   featuredServices service[]    @relation("ServiceFeaturedImage")
@@ -662,10 +677,10 @@ model media {
 }
 
 model mediafolder {
-  id        String        @id @default(cuid())
-  siteId    String
-  name      String
-  parentId  String?
+  id        String        @id @default(cuid()) @db.VarChar(50)
+  siteId    String        @db.VarChar(100)
+  name      String        @db.VarChar(100)
+  parentId  String?       @db.VarChar(50)
   createdAt DateTime      @default(now())
   deletedAt DateTime?
   media     media[]       @relation("MediaInFolder")
@@ -677,21 +692,24 @@ model mediafolder {
 }
 
 model newsletter {
-  id        String   @id @default(cuid())
-  siteId    String
-  email     String
-  status    String   @default("active")
+  id        String   @id @default(cuid()) @db.VarChar(50)
+  siteId    String   @db.VarChar(100)
+  email     String   @db.VarChar(191)
+  status    String   @default("active") @db.VarChar(50)
   createdAt DateTime @default(now())
 
   @@index([siteId], map: "Newsletter_siteId_idx")
+  @@index([email], map: "Newsletter_email_idx")
+  @@index([siteId, status], map: "Newsletter_siteId_status_idx")
+  @@index([siteId, createdAt], map: "Newsletter_siteId_createdAt_idx")
 }
 
 model notificationalert {
-  id        String   @id @default(cuid())
-  siteId    String
-  title     String
-  message   String
-  type      String
+  id        String   @id @default(cuid()) @db.VarChar(50)
+  siteId    String   @db.VarChar(100)
+  title     String   @db.VarChar(255)
+  message   String   @db.Text
+  type      String   @db.VarChar(50)
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 
@@ -702,34 +720,34 @@ model notificationalert {
 }
 
 model page {
-  id                String        @id @default(cuid())
+  id                String        @id @default(cuid()) @db.VarChar(50)
   siteId            String        @db.VarChar(100)
-  title             String
+  title             String        @db.VarChar(255)
   slug              String        @db.VarChar(100)
   status            page_status   @default(DRAFT)
   jsonLd            Json?
-  seoTitle          String?
+  seoTitle          String?       @db.VarChar(255)
   seoKeywords       String?       @db.Text
   seoDescription    String?       @db.Text
-  canonicalUrl      String?
-  ogImage           String?
+  canonicalUrl      String?       @db.VarChar(255)
+  ogImage           String?       @db.VarChar(255)
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   deletedAt         DateTime?
   publishedAt       DateTime?
-  publishedBy       String?
+  publishedBy       String?       @db.VarChar(50)
   isDiscovered      Boolean       @default(false)
   isManagedBySync   Boolean       @default(true)
   isHardcoded       Boolean       @default(false)
-  sourceRoute       String?
+  sourceRoute       String?       @db.VarChar(255)
   priority          Float?
-  changeFreq        String?
+  changeFreq        String?       @db.VarChar(50)
   isEnabled         Boolean       @default(true)
   pageType          page_pageType @default(CMS_BUILT)
   publishedSnapshot Json?
   showInNav         Boolean       @default(true)
-  templateKey       String?
-  templateVersion   String?
+  templateKey       String?       @db.VarChar(100)
+  templateVersion   String?       @db.VarChar(50)
   sections          section[]
   faqs              faq[]
   site              site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
@@ -740,28 +758,29 @@ model page {
 }
 
 model passwordreset {
-  id        String   @id @default(cuid())
-  userId    String
-  token     String   @unique(map: "PasswordReset_token_key")
+  id        String   @id @default(cuid()) @db.VarChar(50)
+  userId    String   @db.VarChar(50)
+  token     String   @unique(map: "PasswordReset_token_key") @db.VarChar(191)
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
 
   @@index([expiresAt], map: "PasswordReset_expiresAt_idx")
   @@index([userId], map: "PasswordReset_userId_idx")
+  @@index([used, expiresAt], map: "PasswordReset_used_expiresAt_idx")
 }
 
 model post {
   id               String         @id @default(cuid()) @db.VarChar(50)
   siteId           String         @db.VarChar(100)
-  title            String
+  title            String         @db.VarChar(255)
   slug             String         @db.VarChar(100)
   content          Json?
   contentJson      String?        @db.LongText
   excerpt          String?        @db.Text
   status           post_status    @default(DRAFT)
-  authorId         String?
-  featuredImageId  String?
+  authorId         String?        @db.VarChar(50)
+  featuredImageId  String?        @db.VarChar(50)
   seoTitle         String?
   seoDescription   String?        @db.Text
   canonicalUrl     String?        @db.VarChar(500)
@@ -789,18 +808,18 @@ model post {
 }
 
 model pushnotification {
-  id              String         @id @default(cuid())
-  siteId          String
-  emailCampaignId String?
-  title           String
+  id              String         @id @default(cuid()) @db.VarChar(50)
+  siteId          String         @db.VarChar(100)
+  emailCampaignId String?        @db.VarChar(50)
+  title           String         @db.VarChar(255)
   message         String         @db.Text
-  url             String?
-  iconUrl         String?
-  imageUrl        String?
-  segment         String         @default("Subscribed Users")
+  url             String?        @db.VarChar(500)
+  iconUrl         String?        @db.VarChar(500)
+  imageUrl        String?        @db.VarChar(500)
+  segment         String         @default("Subscribed Users") @db.VarChar(100)
   filters         String?        @db.Text
-  status          String         @default("draft")
-  oneSignalId     String?
+  status          String         @default("draft") @db.VarChar(50)
+  oneSignalId     String?        @db.VarChar(100)
   sentCount       Int            @default(0)
   deliveredCount  Int            @default(0)
   clickedCount    Int            @default(0)
@@ -821,29 +840,30 @@ model pushnotification {
 }
 
 model recentlyviewed {
-  id          String   @id @default(cuid())
-  userId      String   @db.VarChar(100)
+  id          String   @id @default(cuid()) @db.VarChar(50)
+  userId      String   @db.VarChar(50)
   contentType String   @db.VarChar(50)
-  contentId   String   @db.VarChar(100)
+  contentId   String   @db.VarChar(50)
   viewedAt    DateTime @default(now())
 
   @@unique([userId, contentType, contentId], map: "RecentlyViewed_userId_contentType_contentId_key")
   @@index([userId, viewedAt], map: "RecentlyViewed_userId_viewedAt_idx")
+  @@index([contentType, contentId], map: "RecentlyViewed_contentType_contentId_idx")
 }
 
 model recipe {
   id            String        @id @default(cuid()) @db.VarChar(50)
-  siteId        String?
-  title         String
+  siteId        String?       @db.VarChar(100)
+  title         String        @db.VarChar(255)
   description   String?       @db.Text
   ingredients   Json
   steps         Json
   cookingTime   Int?
   calories      Int?
-  difficulty    String?
+  difficulty    String?       @db.VarChar(50)
   imageUrl      String?       @db.Text
   status        recipe_status @default(PENDING)
-  contributorId String
+  contributorId String        @db.VarChar(50)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   deletedAt     DateTime?
@@ -853,11 +873,11 @@ model recipe {
   fiber          Float?
   fat            Float?
   sugar          Float?
-  canonicalUrl   String?
+  canonicalUrl   String?          @db.VarChar(255)
   jsonLd         Json?
-  ogImage        String?
+  ogImage        String?          @db.VarChar(255)
   seoDescription String?          @db.Text
-  seoTitle       String?
+  seoTitle       String?          @db.VarChar(255)
   allergens      recipeallergen[] @relation("RecipeToRecipeAllergen")
   contributor    user             @relation("RecipeContributor", fields: [contributorId], references: [id], onDelete: Restrict)
   savedBy        savedrecipe[]
@@ -879,9 +899,9 @@ model recipeallergen {
 }
 
 model recipecomment {
-  id        String   @id @default(cuid())
+  id        String   @id @default(cuid()) @db.VarChar(50)
   recipeId  String   @db.VarChar(50)
-  userId    String   @db.VarChar(191)
+  userId    String   @db.VarChar(50)
   content   String   @db.Text
   createdAt DateTime @default(now())
 
@@ -893,9 +913,9 @@ model recipecomment {
 }
 
 model recipelike {
-  id        String   @id @default(cuid())
+  id        String   @id @default(cuid()) @db.VarChar(50)
   recipeId  String   @db.VarChar(50)
-  userId    String   @db.VarChar(191)
+  userId    String   @db.VarChar(50)
   createdAt DateTime @default(now())
 
   recipe recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
@@ -907,9 +927,9 @@ model recipelike {
 }
 
 model reciperating {
-  id        String   @id @default(cuid())
+  id        String   @id @default(cuid()) @db.VarChar(50)
   recipeId  String   @db.VarChar(50)
-  userId    String   @db.VarChar(191)
+  userId    String   @db.VarChar(50)
   rating    Int
   createdAt DateTime @default(now())
 
@@ -928,10 +948,10 @@ model recipetag {
 }
 
 model redirect {
-  id        String    @id @default(cuid())
+  id        String    @id @default(cuid()) @db.VarChar(50)
   siteId    String    @db.VarChar(100)
   source    String    @db.VarChar(100)
-  target    String
+  target    String    @db.VarChar(500)
   type      Int       @default(301)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -942,9 +962,9 @@ model redirect {
 }
 
 model savedarticle {
-  id        String   @id @default(cuid())
-  postId    String   @db.VarChar(100)
-  userId    String   @db.VarChar(100)
+  id        String   @id @default(cuid()) @db.VarChar(50)
+  postId    String   @db.VarChar(50)
+  userId    String   @db.VarChar(50)
   createdAt DateTime @default(now())
   post      post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -955,9 +975,9 @@ model savedarticle {
 }
 
 model savedrecipe {
-  id        String   @id @default(cuid())
+  id        String   @id @default(cuid()) @db.VarChar(50)
   recipeId  String   @db.VarChar(50)
-  userId    String   @db.VarChar(191)
+  userId    String   @db.VarChar(50)
   createdAt DateTime @default(now())
   recipe    recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -968,10 +988,10 @@ model savedrecipe {
 }
 
 model section {
-  id        String    @id @default(cuid())
-  pageId    String
-  name      String?
-  type      String
+  id        String    @id @default(cuid()) @db.VarChar(50)
+  pageId    String    @db.VarChar(50)
+  name      String?   @db.VarChar(191)
+  type      String    @db.VarChar(100)
   order     Int       @default(0)
   isVisible Boolean   @default(true)
   isDeleted Boolean   @default(false)
@@ -979,8 +999,8 @@ model section {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
-  siteId    String?
-  regionKey String?
+  siteId    String?   @db.VarChar(100)
+  regionKey String?   @db.VarChar(100)
   page      page      @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
   @@index([pageId], map: "Section_pageId_idx")
@@ -988,29 +1008,29 @@ model section {
 }
 
 model service {
-  id              String             @id @default(cuid())
+  id              String             @id @default(cuid()) @db.VarChar(50)
   siteId          String             @db.VarChar(100)
-  title           String
+  title           String             @db.VarChar(255)
   description     String?            @db.Text
-  price           String?
-  ctaButtonText   String?
-  ctaButtonLink   String?
+  price           String?            @db.VarChar(100)
+  ctaButtonText   String?            @db.VarChar(100)
+  ctaButtonLink   String?            @db.VarChar(255)
   sortOrder       Int                @default(0)
   status          service_status     @default(DRAFT)
   visibility      service_visibility @default(PUBLIC)
   slug            String?            @db.VarChar(100)
-  accessToken     String?            @unique(map: "Service_accessToken_key")
+  accessToken     String?            @unique(map: "Service_accessToken_key") @db.VarChar(191)
   faqs            Json?
   visible         Boolean            @default(true)
-  featuredImageId String?
+  featuredImageId String?            @db.VarChar(50)
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   deletedAt       DateTime?
-  canonicalUrl    String?
+  canonicalUrl    String?            @db.VarChar(255)
   jsonLd          Json?
-  ogImage         String?
+  ogImage         String?            @db.VarChar(255)
   seoDescription  String?            @db.Text
-  seoTitle        String?
+  seoTitle        String?            @db.VarChar(255)
   featuredImage   media?             @relation("ServiceFeaturedImage", fields: [featuredImageId], references: [id], onDelete: SetNull)
   site            site               @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
@@ -1022,14 +1042,14 @@ model service {
 }
 
 model site {
-  id             String     @id @default(cuid())
-  name           String
-  domain         String?    @unique(map: "Site_domain_key")
+  id             String     @id @default(cuid()) @db.VarChar(50)
+  name           String     @db.VarChar(191)
+  domain         String?    @unique(map: "Site_domain_key") @db.VarChar(191)
   isActive       Boolean    @default(true)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
   deletedAt      DateTime?
-  integrationKey String?    @unique(map: "Site_integrationKey_key")
+  integrationKey String?    @unique(map: "Site_integrationKey_key") @db.VarChar(191)
   users          siteuser[]
   services       service[]
   posts          post[]
@@ -1039,9 +1059,9 @@ model site {
 }
 
 model siteuser {
-  id        String        @id @default(cuid())
+  id        String        @id @default(cuid()) @db.VarChar(50)
   siteId    String        @db.VarChar(100)
-  userId    String        @db.VarChar(100)
+  userId    String        @db.VarChar(50)
   role      siteuser_role @default(EDITOR)
   createdAt DateTime      @default(now())
   deletedAt DateTime?
@@ -1054,11 +1074,11 @@ model siteuser {
 }
 
 model subscriber {
-  id           String                 @id @default(cuid())
+  id           String                 @id @default(cuid()) @db.VarChar(50)
   siteId       String                 @db.VarChar(100)
   email        String                 @db.VarChar(100)
-  name         String?
-  status       String                 @default("active")
+  name         String?                @db.VarChar(191)
+  status       String                 @default("active") @db.VarChar(50)
   tags         String?                @db.Text
   metadata     String?                @db.Text
   createdAt    DateTime               @default(now())
@@ -1071,9 +1091,9 @@ model subscriber {
 }
 
 model subscriberlist {
-  id          String                 @id @default(cuid())
-  siteId      String
-  name        String
+  id          String                 @id @default(cuid()) @db.VarChar(50)
+  siteId      String                 @db.VarChar(100)
+  name        String                 @db.VarChar(100)
   description String?                @db.Text
   createdAt   DateTime               @default(now())
   updatedAt   DateTime               @updatedAt
@@ -1084,9 +1104,9 @@ model subscriberlist {
 }
 
 model subscriberlistmember {
-  id           String         @id @default(cuid())
-  listId       String         @db.VarChar(100)
-  subscriberId String         @db.VarChar(100)
+  id           String         @id @default(cuid()) @db.VarChar(50)
+  listId       String         @db.VarChar(50)
+  subscriberId String         @db.VarChar(50)
   createdAt    DateTime       @default(now())
   list         subscriberlist @relation(fields: [listId], references: [id], onDelete: Cascade)
   subscriber   subscriber     @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
@@ -1097,12 +1117,12 @@ model subscriberlistmember {
 }
 
 model syncedroute {
-  id                String   @id @default(cuid())
+  id                String   @id @default(cuid()) @db.VarChar(50)
   frontendProjectId String   @db.VarChar(100)
   route             String   @db.VarChar(100)
-  source            String?
+  source            String?  @db.VarChar(255)
   discoveredAt      DateTime @default(now())
-  pageId            String?
+  pageId            String?  @db.VarChar(50)
 
   @@unique([frontendProjectId, route], map: "SyncedRoute_frontendProjectId_route_key")
   @@index([frontendProjectId], map: "SyncedRoute_frontendProjectId_idx")
@@ -1110,8 +1130,8 @@ model syncedroute {
 }
 
 model systemerrorlog {
-  id        String   @id @default(cuid())
-  siteId    String?
+  id        String   @id @default(cuid()) @db.VarChar(50)
+  siteId    String?  @db.VarChar(100)
   message   String   @db.Text
   stack     String?  @db.Text
   context   Json?
@@ -1119,6 +1139,7 @@ model systemerrorlog {
 
   @@index([createdAt], map: "SystemErrorLog_createdAt_idx")
   @@index([siteId], map: "SystemErrorLog_siteId_idx")
+  @@index([siteId, createdAt], map: "SystemErrorLog_siteId_createdAt_idx")
 }
 
 model tag {
@@ -1137,11 +1158,11 @@ model tag {
 }
 
 model teammember {
-  id          String    @id @default(cuid())
-  siteId      String
-  name        String
-  role        String
-  photo       String?
+  id          String    @id @default(cuid()) @db.VarChar(50)
+  siteId      String    @db.VarChar(100)
+  name        String    @db.VarChar(191)
+  role        String    @db.VarChar(100)
+  photo       String?   @db.VarChar(500)
   bio         String?   @db.Text
   socialLinks Json?
   sortOrder   Int       @default(0)
@@ -1154,10 +1175,10 @@ model teammember {
 }
 
 model testimonial {
-  id          String    @id @default(cuid())
-  siteId      String
-  clientName  String
-  clientImage String?
+  id          String    @id @default(cuid()) @db.VarChar(50)
+  siteId      String    @db.VarChar(100)
+  clientName  String    @db.VarChar(191)
+  clientImage String?   @db.VarChar(500)
   rating      Int       @default(5)
   content     String    @db.Text
   showHide    Boolean   @default(true)
@@ -1171,20 +1192,22 @@ model testimonial {
 }
 
 model twofactor {
-  id        String   @id @default(cuid())
-  userId    String   @unique(map: "TwoFactor_userId_key")
-  secret    String
+  id        String   @id @default(cuid()) @db.VarChar(50)
+  userId    String   @unique(map: "TwoFactor_userId_key") @db.VarChar(100)
+  secret    String   @db.VarChar(255)
   createdAt DateTime @default(now())
+
+  @@index([createdAt], map: "TwoFactor_createdAt_idx")
 }
 
 model user {
-  id                 String          @id @default(cuid())
-  email              String          @unique(map: "User_email_key")
-  name               String?
-  bio                String?
-  image              String?
-  passwordHash       String
-  legacyPasswordHash String?
+  id                 String          @id @default(cuid()) @db.VarChar(50)
+  email              String          @unique(map: "User_email_key") @db.VarChar(191)
+  name               String?         @db.VarChar(191)
+  bio                String?         @db.Text
+  image              String?         @db.VarChar(500)
+  passwordHash       String          @db.VarChar(255)
+  legacyPasswordHash String?         @db.VarChar(255)
   socialLinks        Json?
   globalRole         user_globalRole @default(VIEWER)
   isActive           Boolean         @default(true)
@@ -1208,14 +1231,14 @@ model user {
 }
 
 model visitorlog {
-  id            String   @id @default(cuid())
-  siteId        String
-  visitorId     String
-  pageViewed    String
-  ipAddress     String?
-  location      String?
-  deviceInfo    String?
-  trafficSource String?
+  id            String   @id @default(cuid()) @db.VarChar(50)
+  siteId        String   @db.VarChar(100)
+  visitorId     String   @db.VarChar(100)
+  pageViewed    String   @db.VarChar(255)
+  ipAddress     String?  @db.VarChar(45)
+  location      String?  @db.VarChar(100)
+  deviceInfo    String?  @db.VarChar(255)
+  trafficSource String?  @db.VarChar(100)
   duration      Int      @default(0)
   createdAt     DateTime @default(now())
 
@@ -1224,9 +1247,9 @@ model visitorlog {
 }
 
 model webhookevent {
-  id        String   @id @default(cuid())
-  siteId    String
-  type      String
+  id        String   @id @default(cuid()) @db.VarChar(50)
+  siteId    String   @db.VarChar(100)
+  type      String   @db.VarChar(100)
   payload   Json
   createdAt DateTime @default(now())
 
@@ -1235,28 +1258,29 @@ model webhookevent {
 }
 
 model webhooksubscription {
-  id        String    @id @default(cuid())
-  siteId    String
-  name      String
-  url       String
+  id        String    @id @default(cuid()) @db.VarChar(50)
+  siteId    String    @db.VarChar(100)
+  name      String    @db.VarChar(191)
+  url       String    @db.VarChar(500)
   events    Json
-  secret    String
+  secret    String    @db.VarChar(255)
   isActive  Boolean   @default(true)
   failCount Int       @default(0)
-  lastError String?
+  lastError String?   @db.Text
   createdAt DateTime  @default(now())
   deletedAt DateTime?
-  userId    String?
+  userId    String?   @db.VarChar(100)
 
   @@index([siteId], map: "WebhookSubscription_siteId_idx")
+  @@index([siteId, isActive], map: "WebhookSubscription_siteId_isActive_idx")
   @@index([userId], map: "WebhookSubscription_userId_fkey")
 }
 
 model componentcontent {
-  id           String   @id @default(cuid())
-  siteId       String
-  pageSlug     String
-  componentKey String
+  id           String   @id @default(cuid()) @db.VarChar(50)
+  siteId       String   @db.VarChar(50)
+  pageSlug     String   @db.VarChar(100)
+  componentKey String   @db.VarChar(50)
   data         Json
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
